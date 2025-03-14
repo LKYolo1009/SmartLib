@@ -2,15 +2,16 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class AuthorBase(BaseModel):
-    """作者的基本信息"""
-    author_name: str = Field(..., description="作者姓名", example="鲁迅")
+    author_name: str = Field(..., description="Author's name", example="Lu Xun")
 
 class AuthorCreate(AuthorBase):
-    """创建作者时使用的模型"""
+    pass
+    
+class AuthorUpdate(AuthorBase):
     pass
 
 class AuthorResponse(AuthorBase):
-    """返回作者信息时使用的模型"""
+    """Model used when returning author information"""
     author_id: int
 
     class Config:
@@ -18,6 +19,6 @@ class AuthorResponse(AuthorBase):
         schema_extra = {
             "example": {
                 "author_id": 1,
-                "author_name": "鲁迅"
+                "author_name": "Lu Xun"
             }
         }

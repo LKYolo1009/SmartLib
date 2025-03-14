@@ -2,9 +2,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from models.category import Category
-from schemas.category import CategoryCreate, CategoryUpdate
-from crud.base import CRUDBase
+from ..models.category import Category
+from ..schemas.category import CategoryCreate, CategoryUpdate
+from .base import CRUDBase
 
 class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
     """分类CRUD操作类"""

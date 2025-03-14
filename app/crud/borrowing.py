@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
-from app.models.borrowing_record import BorrowingRecord
-from app.models.book_copy import BookCopy
-from app.models.student import Student
-from app.schemas.borrowing import BorrowCreate, BorrowUpdate
+from .. models.borrowing_record import BorrowingRecord
+from ..models.book_copy import BookCopy
+from ..models.student import Student
+from ..schemas.borrowing import BorrowCreate, BorrowUpdate
 from .base import CRUDBase
 
 class CRUDBorrowing(CRUDBase[BorrowingRecord, BorrowCreate, BorrowUpdate]):

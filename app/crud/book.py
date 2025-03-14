@@ -2,9 +2,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
-from models.book import Book
-from schemas.book import BookCreate, BookUpdate
-from crud.base import CRUDBase
+from ..models.book import Book
+from ..schemas.book import BookCreate, BookUpdate
+from .base import CRUDBase
 
 class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
     """图书CRUD操作类"""

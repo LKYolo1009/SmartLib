@@ -2,15 +2,15 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class PublisherBase(BaseModel):
-    """出版社的基本信息"""
-    publisher_name: str = Field(..., description="出版社名称", example="人民文学出版社")
+    publisher_name: str = Field(..., description="Publisher Name", example="People's Literature Publishing House")
 
 class PublisherCreate(PublisherBase):
-    """创建出版社时使用的模型"""
+    pass
+class PublisherUpdate(PublisherBase):
     pass
 
 class PublisherResponse(PublisherBase):
-    """返回出版社信息时使用的模型"""
+    """Model used when returning publisher information"""
     publisher_id: int
 
     class Config:
@@ -18,6 +18,6 @@ class PublisherResponse(PublisherBase):
         schema_extra = {
             "example": {
                 "publisher_id": 1,
-                "publisher_name": "人民文学出版社"
+                "publisher_name": "People's Literature Publishing House"
             }
         }

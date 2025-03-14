@@ -2,9 +2,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from models.language import Language
-from schemas.language import LanguageCreate, LanguageUpdate
-from crud.base import CRUDBase
+from ..models.language import Language
+from ..schemas.language import LanguageCreate, LanguageUpdate
+from .base import CRUDBase
 
 class CRUDLanguage(CRUDBase[Language, LanguageCreate, LanguageUpdate]):
     """语言CRUD操作类"""
