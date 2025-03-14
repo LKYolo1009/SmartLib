@@ -1,0 +1,33 @@
+# FastAPI and Server
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.11.0
+psycopg2-binary>=2.9.6  # For PostgreSQL
+python-dotenv>=1.0.0
+
+# Utils
+python-qrcode>=7.4.2  # For QR code generation
+isbnlib>=3.10.0      # For ISBN validation
+validators>=0.20.0
+email-validator>=2.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.1        # For async HTTP requests in tests
+pytest-cov>=4.1.0    # For test coverage
+faker>=19.2.0        # For generating test data
+
+# Date handling
+python-dateutil>=2.8.2
+
+# Middleware
+starlette>=0.28.0
