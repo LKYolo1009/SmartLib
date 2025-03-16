@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
-from app.api import deps
+from app.db.session import get_db
 from app.crud import borrowing
 from app.schemas.borrowing import BorrowCreate, BorrowResponse, BorrowDetail
 
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/", response_model=BorrowDetail, status_code=status.HTTP_201_CREATED)
 def borrow_book(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     borrow_in: BorrowCreate,
 ):
     """
@@ -22,7 +22,7 @@ def borrow_book(
 @router.put("/return/{borrow_id}", response_model=BorrowDetail)
 def return_book(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     borrow_id: int,
 ):
     """
@@ -33,7 +33,7 @@ def return_book(
 @router.put("/extend/{borrow_id}", response_model=BorrowDetail)
 def extend_borrowing(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     borrow_id: int,
     days: int = Query(14, ge=1, le=30, description="Number of days to extend"),
 ):
@@ -45,7 +45,7 @@ def extend_borrowing(
 @router.get("/student/{student_id}", response_model=List[BorrowDetail])
 def get_student_borrowings(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     student_id: int,
     active_only: bool = Query(False, description="Return only active borrowings"),
     skip: int = 0,
@@ -70,7 +70,7 @@ def get_student_borrowings(
 @router.get("/overdue", response_model=List[BorrowDetail])
 def get_overdue_borrowings(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
 ):

@@ -1,26 +1,12 @@
 from fastapi import APIRouter
-
-
-from app.api.v1.endpoints  import (
-    book,
-    book_copy,
-    borrowing,
-    student,
-    metadata # New consolidated metadata router
-
-)
+from app.api.v1.endpoints import book, book_copy, borrowing, student, metadata,search,history
 
 api_router = APIRouter()
 
-# Books and copies
-api_router.include_router(book.router, prefix="/book", tags=["Books"])
-api_router.include_router(book_copy.router, prefix="/book_copy", tags=["Book Copies"])
-
-# Borrowing
-api_router.include_router(borrowing.router, prefix="/borrowing", tags=["Borrowing"])
-
-# Students
-api_router.include_router(student.router, prefix="/student", tags=["Students"])
-
-# Metadata (consolidated from author, category, publisher, language)
-api_router.include_router(metadata.router, prefix="/metadata", tags=["Metadata"])
+api_router.include_router(book.router, prefix="/api/v1/book", tags=["Books"])
+api_router.include_router(book_copy.router, prefix="/api/v1/book_copy", tags=["Book Copies"])
+api_router.include_router(borrowing.router, prefix="/api/v1/borrowing", tags=["Borrowing"])
+api_router.include_router(student.router, prefix="/api/v1/student", tags=["Students"])
+api_router.include_router(metadata.router, prefix="/api/v1/metadata", tags=["Metadata"])
+api_router.include_router(search.router, prefix="/api/v1/search", tags=["United Search"])
+api_router.include_router(history.router, prefix="/api/v1/search", tags=["Borrowing history"])

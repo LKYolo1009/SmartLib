@@ -22,8 +22,8 @@ class Settings(BaseSettings):
 
     # 数据库连接设置
     POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "testuser"
-    POSTGRES_PASSWORD: str = "000000"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "123456"
     POSTGRES_DB: str = "mylibrary"
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
 

@@ -1,29 +1,29 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_, and_, func
 from fastapi import HTTPException, status
 
 from ..models.book import Book
+from ..models.author import Author
+from ..models.publisher import Publisher
+from ..models.category import Category
+from ..models.language import Language
 from ..schemas.book import BookCreate, BookUpdate
 from .base import CRUDBase
+from app.schemas.borrowing import BorrowResponse, BorrowDetail
 
 class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
-    """图书CRUD操作类"""
-
+    """Book CRUD operations class"""
+    
     def get(self, db: Session, book_id: int) -> Optional[Book]:
         """
-        根据ID获取图书
-        :param db: 数据库会话
-        :param book_id: 图书ID
-        :return: 图书对象
+        Get book by ID
         """
         return db.query(Book).filter(Book.book_id == book_id).first()
     
     def get_by_isbn(self, db: Session, isbn: str) -> Optional[Book]:
         """
-        根据ISBN获取图书
-        :param db: 数据库会话
-        :param isbn: 图书ISBN
-        :return: 图书对象
+        Get book by ISBN
         """
         return db.query(Book).filter(Book.isbn == isbn).first()
     
@@ -31,105 +31,291 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         self, db: Session, *, skip: int = 0, limit: int = 100
     ) -> List[Book]:
         """
-        获取多本图书，支持分页
-        :param db: 数据库会话
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 图书列表
+        Get multiple books with pagination
         """
         return db.query(Book).offset(skip).limit(limit).all()
     
-    def get_by_category(
-        self, db: Session, *, category_id: int, skip: int = 0, limit: int = 100
-    ) -> List[Book]:
-        """
-        根据分类获取图书
-        :param db: 数据库会话
-        :param category_id: 分类ID
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 图书列表
-        """
-        return db.query(Book).filter(
-            Book.category_id == category_id
-        ).offset(skip).limit(limit).all()
-    
-    def get_by_author(
-        self, db: Session, *, author_id: int, skip: int = 0, limit: int = 100
-    ) -> List[Book]:
-        """
-        根据作者获取图书
-        :param db: 数据库会话
-        :param author_id: 作者ID
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 图书列表
-        """
-        return db.query(Book).filter(
-            Book.author_id == author_id
-        ).offset(skip).limit(limit).all()
-    
-    def search(
-        self, db: Session, *, query: str, skip: int = 0, limit: int = 100
-    ) -> List[Book]:
-        """
-        搜索图书
-        :param db: 数据库会话
-        :param query: 搜索关键词
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 图书列表
-        """
-        search_query = f"%{query}%"
-        return db.query(Book).filter(
-            Book.title.ilike(search_query) | 
-            Book.isbn.ilike(search_query)
-        ).offset(skip).limit(limit).all()
-    
-    def create(self, db: Session, *, obj_in: BookCreate) -> Book:
-        """
-        创建新图书
-        :param db: 数据库会话
-        :param obj_in: 包含图书数据的schema
-        :return: 创建的图书对象
-        """
-        # 检查ISBN是否已存在
-        if obj_in.isbn:
-            existing_book = self.get_by_isbn(db, isbn=obj_in.isbn)
-            if existing_book:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="ISBN已存在"
-                )
-        
-        db_obj = Book(
-            title=obj_in.title,
-            isbn=obj_in.isbn,
-            author_id=obj_in.author_id,
-            publisher_id=obj_in.publisher_id,
-            publication_year=obj_in.publication_year,
-            language_code=obj_in.language_code,
-            category_id=obj_in.category_id
-        )
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
-    
     def get_with_details(self, db: Session, book_id: int) -> Optional[Book]:
         """
-        获取图书详细信息，包括关联的作者、出版社、分类等
-        :param db: 数据库会话
-        :param book_id: 图书ID
-        :return: 包含详细信息的图书对象
+        Get book with all related details (author, publisher, etc.)
         """
-        return db.query(Book).options(
+        book = db.query(Book).options(
             joinedload(Book.author),
             joinedload(Book.publisher),
             joinedload(Book.language),
             joinedload(Book.category),
             joinedload(Book.copies)
         ).filter(Book.book_id == book_id).first()
+        
+        if book:
+            # Add calculated fields
+            available_copies = sum(1 for copy in book.copies if copy.status == "available")
+            setattr(book, "available_copies", available_copies)
+            setattr(book, "total_copies", len(book.copies))
+            
+            # Add names for easier access
+            setattr(book, "author_name", book.author.name if book.author else None)
+            setattr(book, "publisher_name", book.publisher.name if book.publisher else None)
+            setattr(book, "language_name", book.language.name if book.language else None)
+            setattr(book, "category_name", book.category.name if book.category else None)
+        
+        return book
+    
+    def search_by_title(self, db: Session, *, title: str, limit: int = 20) -> List[Book]:
+        """
+        Search books by title (partial match)
+        """
+        search_query = f"%{title}%"
+        return db.query(Book).filter(
+            Book.title.ilike(search_query)
+        ).limit(limit).all()
+    
+    def search_by_exact_title(self, db: Session, *, title: str, limit: int = 20) -> List[Book]:
+        """
+        Search books by exact title
+        """
+        return db.query(Book).filter(
+            func.lower(Book.title) == func.lower(title)
+        ).limit(limit).all()
+    
+    def search_by_author_name(self, db: Session, *, author_name: str, limit: int = 20) -> List[Book]:
+        """
+        Search books by author name
+        """
+        search_query = f"%{author_name}%"
+        return db.query(Book).join(Book.author).filter(
+            Author.name.ilike(search_query)
+        ).limit(limit).all()
+    
+    def search_by_publisher_name(self, db: Session, *, publisher_name: str, limit: int = 20) -> List[Book]:
+        """
+        Search books by publisher name
+        """
+        search_query = f"%{publisher_name}%"
+        return db.query(Book).join(Book.publisher).filter(
+            Publisher.name.ilike(search_query)
+        ).limit(limit).all()
+    
+    def search_by_category_name(self, db: Session, *, category_name: str, limit: int = 20) -> List[Book]:
+        """
+        Search books by category name
+        """
+        search_query = f"%{category_name}%"
+        return db.query(Book).join(Book.category).filter(
+            Category.name.ilike(search_query)
+        ).limit(limit).all()
+    
+    def search_by_names(
+        self, 
+        db: Session, 
+        *, 
+        title: Optional[str] = None,
+        author_name: Optional[str] = None,
+        publisher_name: Optional[str] = None,
+        category_name: Optional[str] = None,
+        language_name: Optional[str] = None,
+        limit: int = 20
+    ) -> List[Book]:
+        """
+        Search books by various name fields
+        """
+        query = db.query(Book)
+        
+        # Build joins for each related entity only if needed
+        if author_name:
+            query = query.join(Book.author)
+        if publisher_name:
+            query = query.join(Book.publisher, isouter=True)  # Use outer join for optional relationships
+        if category_name:
+            query = query.join(Book.category)
+        if language_name:
+            query = query.join(Book.language, isouter=True)  # Use outer join for optional relationships
+        
+        # Build filter conditions
+        filters = []
+        if title:
+            filters.append(Book.title.ilike(f"%{title}%"))
+        if author_name:
+            filters.append(Author.name.ilike(f"%{author_name}%"))
+        if publisher_name:
+            filters.append(Publisher.name.ilike(f"%{publisher_name}%"))
+        if category_name:
+            filters.append(Category.name.ilike(f"%{category_name}%"))
+        if language_name:
+            filters.append(Language.name.ilike(f"%{language_name}%"))
+        
+        # Apply filters if any
+        if filters:
+            query = query.filter(or_(*filters))
+        
+        return query.limit(limit).all()
+    
+    def create(self, db: Session, *, obj_in: BookCreate) -> Book:
+        """
+        Create a new book
+        """
+        # Check if ISBN already exists (only if ISBN is provided)
+        if obj_in.isbn:
+            existing_book = self.get_by_isbn(db, isbn=obj_in.isbn)
+            if existing_book:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="此ISBN已存在"
+                )
+        
+        # Convert Pydantic model to dict and create DB object
+        obj_data = obj_in.dict(exclude={"initial_copies"})
+        db_obj = Book(**obj_data)
+        
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+    
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: Book,
+        obj_in: Union[BookUpdate, Dict[str, Any]]
+    ) -> Book:
+        """
+        Update book information
+        """
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.dict(exclude_unset=True)
+        
+        # Check if ISBN is being updated and if it already exists
+        if "isbn" in update_data and update_data["isbn"] != db_obj.isbn:
+            existing_book = self.get_by_isbn(db, isbn=update_data["isbn"])
+            if existing_book and existing_book.book_id != db_obj.book_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="此ISBN已被其他图书使用"
+                )
+        
+        return super().update(db, db_obj=db_obj, obj_in=update_data)
+    
+    def check_availability(self, db: Session, book_id: int) -> Dict[str, Any]:
+        """
+        Check if a book is available for borrowing
+        """
+        book = self.get_with_details(db, book_id=book_id)
+        if not book:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="图书未找到"
+            )
+        
+        # Get all available copies
+        available_copies = [copy for copy in book.copies if copy.status == "available"]
+        
+        return {
+            "book_id": book.book_id,
+            "title": book.title,
+            "isbn": book.isbn,
+            "total_copies": len(book.copies),
+            "available_copies": len(available_copies),
+            "is_available": len(available_copies) > 0,
+            "available_copy_ids": [copy.copy_id for copy in available_copies]
+        }
+    
+    def search_books(
+        self, 
+        db: Session, 
+        *,
+        title: Optional[str] = None,
+        author_name: Optional[str] = None,
+        publisher_name: Optional[str] = None,
+        category_name: Optional[str] = None,
+        isbn: Optional[str] = None,
+        publication_year: Optional[int] = None,
+        language_name: Optional[str] = None,
+        limit: int = 20,
+        exact_match: bool = False
+    ) -> List[Book]:
+        """
+        Unified search function with support for multiple criteria
+        """
+        query = db.query(Book)
+        
+        # Join tables as needed
+        if author_name:
+            query = query.join(Book.author)
+        if publisher_name:
+            query = query.join(Book.publisher, isouter=True)
+        if category_name:
+            query = query.join(Book.category)
+        if language_name:
+            query = query.join(Book.language, isouter=True)
+        
+        # Build filters
+        filters = []
+        
+        if title:
+            if exact_match:
+                filters.append(func.lower(Book.title) == func.lower(title))
+            else:
+                filters.append(Book.title.ilike(f"%{title}%"))
+        
+        if author_name:
+            filters.append(Author.name.ilike(f"%{author_name}%"))
+        
+        if publisher_name:
+            filters.append(Publisher.name.ilike(f"%{publisher_name}%"))
+        
+        if category_name:
+            filters.append(Category.name.ilike(f"%{category_name}%"))
+        
+        if isbn:
+            if '-' in isbn or not isbn.isdigit():
+                # Handle ISBN with hyphens or non-digit characters
+                clean_isbn = ''.join(c for c in isbn if c.isdigit())
+                filters.append(func.replace(Book.isbn, '-', '').ilike(f"%{clean_isbn}%"))
+            else:
+                filters.append(Book.isbn.ilike(f"%{isbn}%"))
+        
+        if publication_year:
+            filters.append(Book.publication_year == publication_year)
+        
+        if language_name:
+            filters.append(Language.name.ilike(f"%{language_name}%"))
+        
+        # Apply filters
+        if filters:
+            query = query.filter(or_(*filters))
+        
+        # Apply limit and return results
+        return query.limit(limit).all()
 
-# 创建图书CRUD操作实例
+    def general_search(
+        self,
+        db: Session,
+        *,
+        query: str,
+        limit: int = 20
+    ) -> List[Book]:
+        """
+        General purpose search that looks across multiple fields
+        """
+        search_pattern = f"%{query}%"
+        
+        db_query = db.query(Book).outerjoin(Book.author).outerjoin(
+            Book.publisher
+        ).outerjoin(Book.category).filter(
+            or_(
+                Book.title.ilike(search_pattern),
+                Book.isbn.ilike(search_pattern),
+                Author.name.ilike(search_pattern),
+                Publisher.name.ilike(search_pattern),
+                Category.name.ilike(search_pattern)
+            )
+        ).limit(limit)
+        
+        return db_query.all()
+
+
+# Create book CRUD operations instance
 book_crud = CRUDBook(Book)

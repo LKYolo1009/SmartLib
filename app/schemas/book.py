@@ -1,6 +1,14 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
+from enum import Enum
+
+
+class SortOrder(str, Enum):
+    """Sort order options for book search results"""
+    ASCENDING = "asc"
+    DESCENDING = "desc"
+
 
 class BookBase(BaseModel):
     """Book's Basic Information"""
@@ -35,6 +43,7 @@ class BookBase(BaseModel):
                 raise ValueError('ISBN must be 10 or 13 digits')
         return v
 
+
 class BookCreate(BookBase):
     """Model used when creating a book"""
     initial_copies: Optional[int] = Field(0, description="Number of initial copies to create", example=1)
@@ -59,6 +68,8 @@ class BookCreate(BookBase):
                 "initial_copies": 3
             }
         }
+
+
 class BookUpdate(BookBase):
     """Model used when updating a book"""
     title: Optional[str] = Field(None, description="Title", example="Dream of the Red Chamber")
@@ -81,6 +92,8 @@ class BookUpdate(BookBase):
                 "category_id": 1
             }
         }
+
+
 class BookResponse(BookBase):
     """Model used when returning book basic information"""
     book_id: int
@@ -104,6 +117,7 @@ class BookResponse(BookBase):
             }
         }
 
+
 class BookDetail(BookResponse):
     """Model used when returning book detailed information, including associated information"""
     author_name: str
@@ -111,7 +125,7 @@ class BookDetail(BookResponse):
     language_name: Optional[str] = None
     category_name: str
     available_copies: int
-    total_copies: int  # Added to show total number of copies
+    total_copies: int
     
     class Config:
         orm_mode = True
@@ -133,5 +147,80 @@ class BookDetail(BookResponse):
                 "total_copies": 3,
                 "created_at": "2023-01-01T12:00:00",
                 "updated_at": "2023-01-01T12:00:00"
+            }
+        }
+
+
+class BookSearchParams(BaseModel):
+    """Parameters for advanced book search"""
+    title: Optional[str] = Field(None, description="Book title (partial match)")
+    isbn: Optional[str] = Field(None, description="ISBN (exact or partial match)")
+    author_id: Optional[int] = Field(None, description="Author ID")
+    publisher_id: Optional[int] = Field(None, description="Publisher ID")
+    category_id: Optional[int] = Field(None, description="Category ID")
+    language_code: Optional[str] = Field(None, description="Language code")
+    publication_year: Optional[int] = Field(None, description="Publication year")
+    query: Optional[str] = Field(None, description="General search query across multiple fields")
+    use_or: bool = Field(False, description="Use OR logic between filters instead of AND")
+    sort_by: Optional[str] = Field(None, description="Field to sort results by")
+    sort_desc: bool = Field(False, description="Sort in descending order if True")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "title": "red chamber",
+                "author_id": 1,
+                "category_id": 1,
+                "use_or": True,
+                "sort_by": "publication_year",
+                "sort_desc": True
+            }
+        }
+
+
+class BookBatchStatusUpdate(BaseModel):
+    """Model for batch updating book statuses"""
+    book_ids: List[int] = Field(..., description="List of book IDs to update")
+    status: str = Field(..., description="New status for the books")
+    notes: Optional[str] = Field(None, description="Optional notes about the status change")
+    
+    @field_validator('status')
+    def validate_status(cls, v):
+        """Validate book status"""
+        valid_statuses = ["active", "unpublished", "removed"]
+        if v not in valid_statuses:
+            raise ValueError(f'Status must be one of: {", ".join(valid_statuses)}')
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "book_ids": [1, 2, 3],
+                "status": "unpublished",
+                "notes": "Temporarily removed for review"
+            }
+        }
+
+
+class BookAvailabilityResponse(BaseModel):
+    """Response model for book availability check"""
+    book_id: int
+    title: str
+    isbn: Optional[str]
+    total_copies: int
+    available_copies: int
+    is_available: bool
+    available_copy_ids: List[int]
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "book_id": 1,
+                "title": "Dream of the Red Chamber",
+                "isbn": "9787020002207",
+                "total_copies": 3,
+                "available_copies": 2,
+                "is_available": True,
+                "available_copy_ids": [1, 3]
             }
         }

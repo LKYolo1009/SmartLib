@@ -1,77 +1,112 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union, Tuple
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_, or_, func
 from fastapi import HTTPException, status
+from datetime import datetime, timedelta
 
 from ..models.book_copy import BookCopy
-from ..schemas.book_copy import BookCopyCreate, BookCopyUpdate
+from ..models.book import Book
+from ..schemas.book_copy import BookCopyCreate, BookCopyUpdate, BookCopyStatusUpdate
 from .base import CRUDBase
 
-class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
-    """图书副本CRUD操作类"""
 
+class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
+    """Book copy CRUD operations class"""
+    
     def get(self, db: Session, copy_id: int) -> Optional[BookCopy]:
         """
-        根据ID获取图书副本
-        :param db: 数据库会话
-        :param copy_id: 副本ID
-        :return: 图书副本对象
+        Get book copy by ID
         """
         return db.query(BookCopy).filter(BookCopy.copy_id == copy_id).first()
     
     def get_with_book(self, db: Session, copy_id: int) -> Optional[BookCopy]:
         """
-        获取图书副本及其关联的图书信息
-        :param db: 数据库会话
-        :param copy_id: 副本ID
-        :return: 图书副本对象
+        Get book copy with associated book information
         """
-        return db.query(BookCopy).options(
+        copy = db.query(BookCopy).options(
             joinedload(BookCopy.book)
         ).filter(BookCopy.copy_id == copy_id).first()
+        
+        if copy and copy.book:
+            # Add book title for easier access
+            setattr(copy, "book_title", copy.book.title)
+        
+        return copy
+    
+    def get_by_identifier(self, db: Session, identifier_type: str, value: str) -> Optional[BookCopy]:
+        """
+        Get book copy by various identifiers (call number, QR code, etc.)
+        """
+        if not hasattr(BookCopy, identifier_type):
+            raise ValueError(f"Invalid identifier type: {identifier_type}")
+        
+        return db.query(BookCopy).filter(
+            getattr(BookCopy, identifier_type) == value
+        ).first()
     
     def get_by_call_number(self, db: Session, call_number: str) -> Optional[BookCopy]:
         """
-        根据索书号获取图书副本
-        :param db: 数据库会话
-        :param call_number: 索书号
-        :return: 图书副本对象
+        Get book copy by call number
         """
-        return db.query(BookCopy).filter(BookCopy.call_number == call_number).first()
+        return self.get_by_identifier(db, "call_number", call_number)
     
     def get_by_qr_code(self, db: Session, qr_code: str) -> Optional[BookCopy]:
         """
-        根据QR码获取图书副本
-        :param db: 数据库会话
-        :param qr_code: QR码
-        :return: 图书副本对象
+        Get book copy by QR code
         """
-        return db.query(BookCopy).filter(BookCopy.qr_code == qr_code).first()
+        return self.get_by_identifier(db, "qr_code", qr_code)
     
     def get_by_book(
         self, db: Session, *, book_id: int, skip: int = 0, limit: int = 100
     ) -> List[BookCopy]:
         """
-        获取指定图书的所有副本
-        :param db: 数据库会话
-        :param book_id: 图书ID
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 图书副本列表
+        Get all copies of a specific book
         """
         return db.query(BookCopy).filter(
             BookCopy.book_id == book_id
         ).offset(skip).limit(limit).all()
     
+    def get_copies_by_title_and_status(
+        self, 
+        db: Session, 
+        *, 
+        book_title: Optional[str] = None,
+        status: Optional[str] = None,
+        condition: Optional[str] = None,
+        limit: int = 20
+    ) -> List[BookCopy]:
+        """
+        Get book copies filtered by book title and status
+        """
+        query = db.query(BookCopy).options(joinedload(BookCopy.book))
+        
+        # Apply filters
+        if book_title:
+            query = query.join(Book).filter(Book.title.ilike(f"%{book_title}%"))
+        
+        filters = []
+        if status:
+            filters.append(BookCopy.status == status)
+        if condition:
+            filters.append(BookCopy.condition == condition)
+        
+        if filters:
+            query = query.filter(and_(*filters))
+        
+        copies = query.limit(limit).all()
+        
+        # Add book title for easier access
+        for copy in copies:
+            if copy.book:
+                setattr(copy, "book_title", copy.book.title)
+        
+        return copies
+    
     def get_available_by_book(
         self, db: Session, *, book_id: int, skip: int = 0, limit: int = 100
     ) -> List[BookCopy]:
         """
-        获取指定图书的所有可借阅副本
-        :param db: 数据库会话
-        :param book_id: 图书ID
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 可借阅的图书副本列表
+        Get all available copies of a specific book
         """
         return db.query(BookCopy).filter(
             BookCopy.book_id == book_id,
@@ -80,56 +115,140 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
     
     def create(self, db: Session, *, obj_in: BookCopyCreate) -> BookCopy:
         """
-        创建新的图书副本
-        :param db: 数据库会话
-        :param obj_in: 包含图书副本数据的schema
-        :return: 创建的图书副本对象
+        Create a new book copy
         """
-        # 检查索书号是否已存在
-        existing_copy = self.get_by_call_number(db, call_number=obj_in.call_number)
-        if existing_copy:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="索书号已存在"
-            )
+        # Check if call number already exists
+        if obj_in.call_number:
+            existing_copy = self.get_by_call_number(db, call_number=obj_in.call_number)
+            if existing_copy:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Call number already exists"
+                )
         
-        db_obj = BookCopy(
-            book_id=obj_in.book_id,
-            call_number=obj_in.call_number,
-            acquisition_type=obj_in.acquisition_type,
-            acquisition_date=obj_in.acquisition_date,
-            price=obj_in.price,
-            condition=obj_in.condition,
-            status=obj_in.status,
-            notes=obj_in.notes
-        )
+        # Generate QR code if not provided
+        if not obj_in.qr_code:
+            # In a real implementation, this would be a more sophisticated algorithm
+            obj_in.qr_code = f"QR-{obj_in.book_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Convert Pydantic model to dict and create DB object
+        obj_data = obj_in.dict()
+        db_obj = BookCopy(**obj_data)
+        
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
+        
+        # Add book title if available
+        if hasattr(db_obj, 'book') and db_obj.book:
+            setattr(db_obj, "book_title", db_obj.book.title)
+        
         return db_obj
     
     def update_status(
-        self, db: Session, *, copy_id: int, status: str
+        self, db: Session, *, copy_id: int, status_update: BookCopyStatusUpdate
     ) -> BookCopy:
         """
-        更新图书副本状态
-        :param db: 数据库会话
-        :param copy_id: 副本ID
-        :param status: 新状态
-        :return: 更新后的图书副本对象
+        Update book copy status with additional information
         """
         db_obj = self.get(db, copy_id=copy_id)
         if not db_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="图书副本不存在"
+                detail="Book copy not found"
             )
         
-        db_obj.status = status
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        update_data = {"status": status_update.status}
+        
+        # Add notes if provided
+        if status_update.notes:
+            update_data["notes"] = status_update.notes if not db_obj.notes else f"{db_obj.notes}\n[{datetime.now().strftime('%Y-%m-%d')}] {status_update.status}: {status_update.notes}"
+        
+        # Update condition if provided
+        if status_update.condition:
+            update_data["condition"] = status_update.condition
+        
+        updated_copy = super().update(db, db_obj=db_obj, obj_in=update_data)
+        
+        # Add book title if available
+        if hasattr(updated_copy, 'book') and updated_copy.book:
+            setattr(updated_copy, "book_title", updated_copy.book.title)
+        
+        return updated_copy
+    
+    def get_status_counts_by_book(
+        self, db: Session, book_id: int
+    ) -> Dict[str, int]:
+        """
+        Get counts of copies by status for a specific book
+        """
+        query = db.query(
+            BookCopy.status, 
+            func.count(BookCopy.copy_id).label('count')
+        ).filter(
+            BookCopy.book_id == book_id
+        ).group_by(BookCopy.status)
+        
+        result = {row.status: row.count for row in query.all()}
+        
+        # Ensure all statuses have a count
+        for status in ["available", "borrowed", "processing", "missing", "damaged", "unpublished"]:
+            if status not in result:
+                result[status] = 0
+        
+        return result
+    
+    def bulk_update_status(
+        self, db: Session, *, copy_ids: List[int], status: str, notes: Optional[str] = None
+    ) -> Tuple[int, List[int]]:
+        """
+        Update status for multiple book copies at once
+        """
+        successful_updates = 0
+        failed_updates = []
+        
+        for copy_id in copy_ids:
+            try:
+                self.update_status(
+                    db, 
+                    copy_id=copy_id, 
+                    status_update=BookCopyStatusUpdate(
+                        status=status,
+                        notes=notes
+                    )
+                )
+                successful_updates += 1
+            except HTTPException:
+                failed_updates.append(copy_id)
+        
+        return successful_updates, failed_updates
+    
+    def get_copies_with_book_details(
+        self, db: Session, *, filters: Dict[str, Any] = None, skip: int = 0, limit: int = 100
+    ) -> List[BookCopy]:
+        """
+        Get book copies with their associated book details, with optional filtering
+        """
+        query = db.query(BookCopy).options(joinedload(BookCopy.book))
+        
+        if filters:
+            filter_conditions = []
+            for key, value in filters.items():
+                if hasattr(BookCopy, key):
+                    filter_conditions.append(getattr(BookCopy, key) == value)
+            
+            if filter_conditions:
+                query = query.filter(and_(*filter_conditions))
+        
+        copies = query.offset(skip).limit(limit).all()
+        
+        # Add book title for easier access
+        for copy in copies:
+            if copy.book:
+                setattr(copy, "book_title", copy.book.title)
+        
+        return copies
 
-# 创建图书副本CRUD操作实例
+
+# Create book copy CRUD operations instance
 book_copy_crud = CRUDBookCopy(BookCopy)

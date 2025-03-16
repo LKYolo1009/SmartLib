@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
-from app.api import deps
+from app.db.session import get_db
 from app.crud import student
 from app.schemas.student import StudentCreate, StudentResponse, StudentUpdate
 
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/", response_model=List[StudentResponse])
 def get_students(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
     status: str = None,
@@ -25,7 +25,7 @@ def get_students(
 @router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
 def create_student(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     student_in: StudentCreate,
 ):
     """
@@ -36,7 +36,7 @@ def create_student(
 @router.get("/{student_id}", response_model=StudentResponse)
 def get_student(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     student_id: int,
 ):
     """
@@ -53,7 +53,7 @@ def get_student(
 @router.put("/{student_id}", response_model=StudentResponse)
 def update_student(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     student_id: int,
     student_in: StudentUpdate,
 ):
@@ -71,7 +71,7 @@ def update_student(
 @router.put("/{student_id}/status", response_model=StudentResponse)
 def update_student_status(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     student_id: int,
     status: str = Query(..., description="New status"),
 ):
@@ -83,7 +83,7 @@ def update_student_status(
 @router.get("/search/", response_model=List[StudentResponse])
 def search_students(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     q: str = Query(..., min_length=1, description="Search keyword"),
     skip: int = 0,
     limit: int = 100,

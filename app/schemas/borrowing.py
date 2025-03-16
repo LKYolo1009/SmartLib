@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -178,3 +178,30 @@ class BorrowSummary(BaseModel):
                 ]
             }
         }
+
+
+class BorrowingExtendRequest(BaseModel):
+    """Request model for extending a borrowing"""
+    borrow_id: int
+    days: int = Field(..., ge=1, le=30, description="Number of days to extend")
+    reason: Optional[str] = None
+
+
+class BorrowingStats(BaseModel):
+    """Statistical information about borrowings"""
+    total_borrowings: int
+    active_borrowings: int
+    overdue_borrowings: int
+    average_days_kept: float
+    most_borrowed_books: List[Dict[str, Any]]
+    most_active_students: List[Dict[str, Any]]
+    borrowings_by_category: List[Dict[str, Any]]
+    borrowings_by_month: List[Dict[str, Any]]
+
+
+class ActiveBorrowingsResponse(BaseModel):
+    """Response model for active borrowings query"""
+    total_count: int
+    returned_count: int
+    overdue_count: int
+    borrowings: List[BorrowDetail]
