@@ -34,7 +34,6 @@ After starting the service, you can access the API documentation at:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-```
 
 ## Project Structure
 
