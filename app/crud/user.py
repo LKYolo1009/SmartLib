@@ -8,45 +8,44 @@ from app.crud.base import CRUDBase
 from app.core.security import get_password_hash, verify_password
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
-    """用户CRUD操作类"""
+    """User CRUD operations class"""
 
     def get(self, db: Session, id: int) -> Optional[User]:
         """
-        根据ID获取用户
-        :param db: 数据库会话
-        :param id: 用户ID
-        :return: 用户对象
+        Get user by ID
+        :param db: Database session
+        :param id: User ID
+        :return: User object
         """
         return db.query(User).filter(User.id == id).first()
     
     def get_by_username(self, db: Session, username: str) -> Optional[User]:
         """
-        根据用户名获取用户
-        :param db: 数据库会话
-        :param username: 用户名
-        :return: 用户对象
+        Get user by username
+        :param db: Database session
+        :param username: Username
+        :return: User object
         """
         return db.query(User).filter(User.username == username).first()
     
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
-        """
-        创建新用户
-        :param db: 数据库会话
-        :param obj_in: 包含用户数据的schema
-        :return: 创建的用户对象
-        """
-        # 检查用户名是否已存在
-        existing_user = self.get_by_username(db, username=obj_in.username)
+        """Create a new user"""
+        # Check if username already exists
+        existing_user = db.query(User).filter(User.username == obj_in.username).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="用户名已存在"
+                detail="Username already exists"
             )
         
-        # 创建新用户，密码哈希处理
+        # Create new user with hashed password
         db_obj = User(
             username=obj_in.username,
-            hashed_password=get_password_hash(obj_in.password)
+            hashed_password=get_password_hash(obj_in.password),
+            full_name=obj_in.full_name,
+            email=obj_in.email,
+            is_active=obj_in.is_active,
+            is_superuser=obj_in.is_superuser,
         )
         db.add(db_obj)
         db.commit()
@@ -57,11 +56,11 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         self, db: Session, *, username: str, password: str
     ) -> Optional[User]:
         """
-        验证用户
-        :param db: 数据库会话
-        :param username: 用户名
-        :param password: 密码
-        :return: 验证成功则返回用户对象，否则返回None
+        Authenticate user
+        :param db: Database session
+        :param username: Username
+        :param password: Password
+        :return: Authenticated user object, or None if authentication fails
         """
         user = self.get_by_username(db, username=username)
         if not user:
@@ -74,17 +73,17 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         self, db: Session, *, user_id: int, new_password: str
     ) -> User:
         """
-        修改用户密码
-        :param db: 数据库会话
-        :param user_id: 用户ID
-        :param new_password: 新密码
-        :return: 更新后的用户对象
+        Change user password
+        :param db: Database session
+        :param user_id: User ID
+        :param new_password: New password
+        :return: Updated user object
         """
         user = self.get(db, id=user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="用户不存在"
+                detail="User does not exist"
             )
         
         user.hashed_password = get_password_hash(new_password)
@@ -93,5 +92,5 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db.refresh(user)
         return user
 
-# 创建用户CRUD操作实例
+# Create user CRUD instance
 user_crud = CRUDUser(User)

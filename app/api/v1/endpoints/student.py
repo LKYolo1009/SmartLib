@@ -1,27 +1,14 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Path
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.crud import student
-from app.schemas.student import StudentCreate, StudentResponse, StudentUpdate
+from app.crud.student import student_crud
+from app.schemas.student import StudentCreate, StudentUpdate, StudentResponse
 
 router = APIRouter()
 
-@router.get("/", response_model=List[StudentResponse])
-def get_students(
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
-    status: str = None,
-):
-    """
-    Retrieve a list of students, with optional filtering by status.
-    """
-    if status == "active":
-        return student.get_active_students(db, skip=skip, limit=limit)
-    return student.get_multi(db, skip=skip, limit=limit)
-
+# done
 @router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
 def create_student(
     *,
@@ -31,64 +18,55 @@ def create_student(
     """
     Create a new student.
     """
-    return student.create(db=db, obj_in=student_in)
+    return student_crud.create(db=db, obj_in=student_in)
 
-@router.get("/{student_id}", response_model=StudentResponse)
-def get_student(
+
+@router.get("/", response_model=List[StudentResponse])
+def get_students(
     *,
     db: Session = Depends(get_db),
-    student_id: int,
+    skip: int = Query(0, ge=0, description="Skip N records"),
+    limit: int = Query(100, ge=1, le=1000, description="Limit number of records"),
+    status: Optional[str] = Query(None, description="Filter by status: active, inactive, suspended"),
 ):
     """
-    Retrieve detailed information about a student.
+    Retrieve all students with optional filters.
     """
-    student = student.get(db, student_id=student_id)
-    if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found"
-        )
-    return student
+    if status == "active":
+        return student_crud.get_active_students(db=db, skip=skip, limit=limit)
+    return student_crud.get_multi(db=db, skip=skip, limit=limit)
 
-@router.put("/{student_id}", response_model=StudentResponse)
-def update_student(
-    *,
-    db: Session = Depends(get_db),
-    student_id: int,
-    student_in: StudentUpdate,
-):
-    """
-    Update student information.
-    """
-    student = student.get(db, student_id=student_id)
-    if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found"
-        )
-    return student.update(db=db, db_obj=student, obj_in=student_in)
 
-@router.put("/{student_id}/status", response_model=StudentResponse)
-def update_student_status(
-    *,
-    db: Session = Depends(get_db),
-    student_id: int,
-    status: str = Query(..., description="New status"),
-):
-    """
-    Update student status.
-    """
-    return student.update_status(db=db, student_id=student_id, status=status)
-
-@router.get("/search/", response_model=List[StudentResponse])
+@router.get("/search", response_model=List[StudentResponse])
 def search_students(
     *,
     db: Session = Depends(get_db),
-    q: str = Query(..., min_length=1, description="Search keyword"),
-    skip: int = 0,
-    limit: int = 100,
+    query: str = Query(..., min_length=2, description="Search query (name, matric, email)"),
+    skip: int = Query(0, ge=0, description="Skip N records"),
+    limit: int = Query(100, ge=1, le=1000, description="Limit number of records"),
 ):
     """
     Search for students by name, matric number, or email.
     """
-    return student.search(db, query=q, skip=skip, limit=limit)
+    return student_crud.search(db=db, query=query, skip=skip, limit=limit)
+
+
+@router.patch("/{matric_number}", response_model=StudentResponse)
+def update_student(
+    *,
+    db: Session = Depends(get_db),
+    matric_number: str = Path(..., description="Student matric number"),
+    student_in: StudentUpdate,
+):
+    """
+    Partially update student information by matric number.
+    Only the fields provided in the request will be updated.
+    """
+    db_student = student_crud.get(db, matric_number=matric_number)
+    if not db_student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with matric number {matric_number} not found"
+        )
+    return student_crud.update(db=db, db_obj=db_student, obj_in=student_in)
+

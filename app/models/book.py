@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
-
 from app.db.session import Base
+
 
 class Book(Base):
     __tablename__ = "books"
@@ -14,11 +14,11 @@ class Book(Base):
     publisher_id = Column(Integer, ForeignKey("publishers.publisher_id"))
     publication_year = Column(SmallInteger)
     language_code = Column(String(3), ForeignKey("languages.language_code"))
-    category_id = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
+    category_id = Column(Integer, ForeignKey("dewey_categories.category_id"), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
-    # 关系
+    # relationships
     author = relationship("Author", back_populates="books")
     publisher = relationship("Publisher", back_populates="books")
     language = relationship("Language", back_populates="books")

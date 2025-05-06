@@ -2,9 +2,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from datetime import datetime
-
+from sqlalchemy import func, or_
+import logging
 from app.db.session import get_db
-from app.crud import book as book_crud
+from app.crud.book import book_crud
 from app.schemas.book import (
     BookCreate, 
     BookResponse, 
@@ -12,49 +13,60 @@ from app.schemas.book import (
     BookUpdate,
     BookAvailabilityResponse
 )
+from fastapi import Path
 
 router = APIRouter()
 
+#Done
 @router.get("/", response_model=List[BookResponse])
 def get_books(
-    db: Session = Depends(get_db),
-    limit: int = 20,
-    title: Optional[str] = None,
-    author_name: Optional[str] = None,
-    publisher_name: Optional[str] = None,
-    category_name: Optional[str] = None,
-    language_name: Optional[str] = None,
+    limit: Optional[int] = Query(20, gt=0, description="Maximum number of books to return"),
+    title: Optional[str] = Query(None, description="Filter by book title"),
+    author_name: Optional[str] = Query(None, description="Filter by author name"),
+    publisher_name: Optional[str] = Query(None, description="Filter by publisher name"),
+    category_name: Optional[str] = Query(None, description="Filter by category name"),
+    language_name: Optional[str] = Query(None, description="Filter by language"),
+    db: Session = Depends(get_db)
 ):
     """
-    
-    - **limit**: Maximum number of records to return
-    - **title**: Filter by book title (partial match)
-    - **author_name**: Filter by author name
-    - **publisher_name**: Filter by publisher name
-    - **category_name**: Filter by category name
-    - **language_name**: Filter by language name
+    Retrieve books with optional filters.
     """
-    return book_crud.search_by_names(
-        db, 
-        title=title,
-        author_name=author_name,
-        publisher_name=publisher_name,
-        category_name=category_name,
-        language_name=language_name,
-        limit=limit
-    )
-
+    try:
+        books = book_crud.search_books(
+            db=db,
+            title=title,
+            author_name=author_name,
+            publisher_name=publisher_name,
+            category_name=category_name,
+            language_name=language_name,
+            limit=limit,
+            exact_match=False
+        )
+        logging.info("Books retrieved successfully")
+        return books
+    except Exception as e:
+        error_message = f"Error retrieving books: {str(e)}"
+        logging.error(error_message, exc_info=True)
+        
+        # Return detailed error in development environment
+        import traceback
+        error_details = traceback.format_exc()
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": "Failed to retrieve books",
+                "error": str(e),
+                "traceback": error_details.split('\n')  # Split stack trace into lines
+            }
+        )
+# done
 @router.post("/", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
 def create_book(
     *,
     db: Session = Depends(get_db),
     book_in: BookCreate,
 ):
-    """
-    Create a new book and optionally create initial copies.
-    
-    - **book_in**: Book creation data, including optional initial copy count
-    """
     # Create book record
     new_book = book_crud.create(db=db, obj_in=book_in)
     
@@ -81,47 +93,7 @@ def create_book(
             )
     
     return new_book
-
-@router.get("/{book_id}", response_model=BookDetail)
-def get_book(
-    *,
-    db: Session = Depends(get_db),
-    book_id: int,
-):
-    """
-    Get book details.
-    
-    - **book_id**: Book ID
-    """
-    db_book = book_crud.get_with_details(db, book_id=book_id)
-    if not db_book:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Book not found"
-        )
-    return db_book
-
-@router.put("/{book_id}", response_model=BookResponse)
-def update_book(
-    *,
-    db: Session = Depends(get_db),
-    book_id: int,
-    book_in: BookUpdate,
-):
-    """
-    Update book information.
-    
-    - **book_id**: Book ID
-    - **book_in**: Updated book data
-    """
-    db_book = book_crud.get(db, book_id=book_id)
-    if not db_book:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Book not found"
-        )
-    return book_crud.update(db=db, db_obj=db_book, obj_in=book_in)
-
+# done
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_book(
     *,
@@ -149,8 +121,8 @@ def delete_book(
     
     book_crud.remove(db=db, id=book_id)
     return None
-
-@router.get("/isbn/{isbn}", response_model=BookDetail)
+# done
+@router.get("/search/isbn/{isbn}", response_model=BookDetail)
 def get_book_by_isbn(
     *,
     db: Session = Depends(get_db),
@@ -167,8 +139,9 @@ def get_book_by_isbn(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Book not found"
         )
+    # Make sure we get a fully populated BookDetail object
     return book_crud.get_with_details(db, book_id=db_book.book_id)
-
+#done
 @router.get("/search/title/{title}", response_model=List[BookResponse])
 def search_books_by_title(
     *,
@@ -189,7 +162,7 @@ def search_books_by_title(
         return book_crud.search_by_exact_title(db, title=title, limit=limit)
     else:
         return book_crud.search_by_title(db, title=title, limit=limit)
-
+#done
 @router.get("/search/author/{author_name}", response_model=List[BookResponse])
 def search_books_by_author(
     *,
@@ -235,31 +208,29 @@ def search_books_by_category(
     """
     return book_crud.search_by_category_name(db, category_name=category_name, limit=limit)
 
-@router.get("/title/{title}/availability", response_model=List[BookAvailabilityResponse])
-def check_book_availability_by_title(
+@router.patch("/{book_id}", response_model=BookResponse)
+def partial_update_book(
     *,
     db: Session = Depends(get_db),
-    title: str,
-    exact_match: bool = False,
-    limit: int = 5,
+    book_id: int = Path(..., title="Book ID", description="ID of the book to update"),
+    book_in: BookUpdate,
 ):
     """
-    Check book availability by title.
-    Returns the availability status of books that match the criteria.
+    Partially update a book's information.
     
-    - **title**: Book title
-    - **exact_match**: Whether to match exactly
-    - **limit**: Maximum number of records to return
+    - **book_id**: Book ID
+    - **book_in**: Updated book data (only include fields that need to be updated)
     """
-    books = []
-    if exact_match:
-        books = book_crud.search_by_exact_title(db, title=title, limit=limit)
-    else:
-        books = book_crud.search_by_title(db, title=title, limit=limit)
+    db_book = book_crud.get(db, book_id=book_id)
+    if not db_book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found"
+        )
     
-    results = []
-    for book in books:
-        availability = book_crud.check_availability(db, book_id=book.book_id)
-        results.append(availability)
+    # Filter out None values to only update provided fields
+    update_data = {k: v for k, v in book_in.dict(exclude_unset=True).items() if v is not None}
     
-    return results
+    updated_book = book_crud.update(db=db, db_obj=db_book, obj_in=update_data)
+    return updated_book
+

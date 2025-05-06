@@ -11,5 +11,4 @@ class Language(Base):
     language_name = Column(String(50), nullable=False, unique=True)
     created_at = Column(DateTime, default=datetime.now)
     
-    # 关系
     books = relationship("Book", back_populates="language")

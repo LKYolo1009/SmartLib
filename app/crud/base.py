@@ -4,30 +4,30 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel as ModelBase
 
-# 定义泛型类型变量
-ModelType = TypeVar("ModelType", bound=BaseModel)
+# Define generic type variables
+ModelType = TypeVar("ModelType", bound=ModelBase)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     """
-    基础CRUD操作类提供通用的数据库操作方法
+    Base CRUD operation class providing generic database operation methods
     """
     def __init__(self, model: Type[ModelType]):
         """
-        初始化CRUD对象
-        :param model: SQLAlchemy模型类
+        Initialize CRUD object
+        :param model: SQLAlchemy model class
         """
         self.model = model
 
     def get(self, db: Session, id: Any) -> Optional[ModelType]:
         """
-        根据ID获取单个对象
-        :param db: 数据库会话
-        :param id: 对象ID
-        :return: 查询到的对象，如果不存在则返回None
+        Get a single object by ID
+        :param db: Database session
+        :param id: Object ID
+        :return: Queried object, returns None if not found
         """
         return db.query(self.model).filter(self.model.id == id).first()
 
@@ -35,20 +35,20 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: Session, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         """
-        获取多个对象，支持分页
-        :param db: 数据库会话
-        :param skip: 跳过的记录数
-        :param limit: 返回的最大记录数
-        :return: 对象列表
+        Get multiple objects, supports pagination
+        :param db: Database session
+        :param skip: Number of records to skip
+        :param limit: Maximum number of records to return
+        :return: List of objects
         """
         return db.query(self.model).offset(skip).limit(limit).all()
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
         """
-        创建新对象
-        :param db: 数据库会话
-        :param obj_in: 包含创建数据的Pydantic模型
-        :return: 创建的对象
+        Create new object
+        :param db: Database session
+        :param obj_in: Pydantic model containing creation data
+        :return: Created object
         """
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data)
@@ -65,11 +65,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         obj_in: Union[UpdateSchemaType, Dict[str, Any]]
     ) -> ModelType:
         """
-        更新对象
-        :param db: 数据库会话
-        :param db_obj: 要更新的数据库对象
-        :param obj_in: 包含更新数据的Pydantic模型或字典
-        :return: 更新后的对象
+        Update object
+        :param db: Database session
+        :param db_obj: Database object to update
+        :param obj_in: Pydantic model or dictionary containing update data
+        :return: Updated object
         """
         obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
@@ -86,10 +86,10 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def remove(self, db: Session, *, id: int) -> ModelType:
         """
-        删除对象
-        :param db: 数据库会话
-        :param id: 对象ID
-        :return: 删除的对象
+        Delete object
+        :param db: Database session
+        :param id: Object ID
+        :return: Deleted object
         """
         obj = db.query(self.model).get(id)
         db.delete(obj)

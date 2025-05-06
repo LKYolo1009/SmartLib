@@ -1,21 +1,21 @@
-from sqlalchemy import Column, Integer, String, CheckConstraint
+from sqlalchemy import Column, Integer, String, CheckConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 from .base import Base
 
 class Category(Base):
-    __tablename__ = 'categories'
+    __tablename__ = 'dewey_categories'
     
-    # 分类ID，主键
-    category_id = Column(Integer, primary_key=True)
-    # 分类名称
-    category_name = Column(String(100), nullable=False)
-    # 分类代码，唯一
+    category_id = Column(Integer, primary_key=True, autoincrement=True)
     category_code = Column(String(20), nullable=False, unique=True)
+    category_name = Column(String(100), nullable=False)
+    parent_id = Column(Integer, ForeignKey('dewey_categories.category_id'), nullable=True)
+    
+    parent = relationship("Category", 
+                        remote_side=[category_id], 
+                        backref="subcategories")
+    
+    books = relationship("Book", back_populates="category")
     
     __table_args__ = (
-        # 确保分类代码只包含大写字母和数字
-        CheckConstraint("category_code ~ '^[A-Z0-9]+$'", name='valid_category_code'),
+        CheckConstraint("category_code ~ '^[0-9]{3}(\.[0-9]+)?$'", name='valid_dewey_code'),
     )
-    
-    # 与Book模型的关系，一个分类可以有多本书
-    books = relationship("Book", back_populates="category")

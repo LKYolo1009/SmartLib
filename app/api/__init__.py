@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .api_router import api_router  # 确保导入路径正确
+from .api_router import api_router  # Ensure correct import path
 
 app = FastAPI()
 

@@ -1,16 +1,16 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, CheckConstraint, Index
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, CheckConstraint, Index, Text, String
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
+from sqlalchemy import event, text
 from .base import Base
 from .enums import borrow_status
 
 class BorrowingRecord(Base):
     __tablename__ = 'borrowing_records'
     
-    
     borrow_id = Column(Integer, primary_key=True)
     copy_id = Column(Integer, ForeignKey('book_copies.copy_id'), nullable=False)
-    student_id = Column(Integer, ForeignKey('students.student_id'), nullable=False)
+    matric_number = Column(String(20), ForeignKey('students.matric_number'), nullable=False)
     borrow_date = Column(DateTime(timezone=True), server_default=func.now())
     due_date = Column(DateTime(timezone=True), nullable=False)
     extension_date = Column(DateTime(timezone=True))
@@ -33,3 +33,27 @@ class BorrowingRecord(Base):
     
     copy = relationship("BookCopy", back_populates="borrowing_records")
     student = relationship("Student", back_populates="borrowing_records")
+
+    @validates('status')
+    def validate_status(self, key, status):
+        if status not in ['borrowed', 'returned']:
+            raise ValueError("Status must be either 'borrowed' or 'returned'")
+    
+        
+        return status
+
+    @validates('matric_number')
+    def validate_matric_number(self, key, matric_number):
+        if not matric_number:
+            raise ValueError("Matriculation number is required")
+        if not matric_number.startswith('A') or len(matric_number) != 10 or not matric_number[1:9].isdigit() or not matric_number[9].isalpha():
+            raise ValueError("Invalid matriculation number format. Must be A followed by 8 digits and 1 letter (e.g., A12345678B)")
+        return matric_number
+
+    @validates('due_date')
+    def validate_due_date(self, key, due_date):
+        if not due_date:
+            raise ValueError("Due date is required")
+        if self.borrow_date and due_date < self.borrow_date:
+            raise ValueError("Due date cannot be earlier than borrow date")
+        return due_date

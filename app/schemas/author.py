@@ -11,7 +11,6 @@ class AuthorUpdate(AuthorBase):
     pass
 
 class AuthorResponse(AuthorBase):
-    """Model used when returning author information"""
     author_id: int
 
     class Config:

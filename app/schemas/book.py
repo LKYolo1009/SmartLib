@@ -101,7 +101,7 @@ class BookResponse(BookBase):
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes  = True
         schema_extra = {
             "example": {
                 "book_id": 1,
@@ -117,7 +117,6 @@ class BookResponse(BookBase):
             }
         }
 
-
 class BookDetail(BookResponse):
     """Model used when returning book detailed information, including associated information"""
     author_name: str
@@ -128,7 +127,7 @@ class BookDetail(BookResponse):
     total_copies: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         schema_extra = {
             "example": {
                 "book_id": 1,
@@ -149,7 +148,6 @@ class BookDetail(BookResponse):
                 "updated_at": "2023-01-01T12:00:00"
             }
         }
-
 
 class BookSearchParams(BaseModel):
     """Parameters for advanced book search"""
@@ -210,7 +208,6 @@ class BookAvailabilityResponse(BaseModel):
     total_copies: int
     available_copies: int
     is_available: bool
-    available_copy_ids: List[int]
     
     class Config:
         schema_extra = {
@@ -220,7 +217,6 @@ class BookAvailabilityResponse(BaseModel):
                 "isbn": "9787020002207",
                 "total_copies": 3,
                 "available_copies": 2,
-                "is_available": True,
-                "available_copy_ids": [1, 3]
+                "is_available": True
             }
         }

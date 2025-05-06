@@ -1,190 +1,89 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from enum import Enum
 
 
 class BorrowStatus(str, Enum):
-    """Enumeration of possible borrow statuses"""
+    """Borrowing status options"""
     BORROWED = "borrowed"
     EXTENDED = "extended"
     RETURNED = "returned"
     OVERDUE = "overdue"
 
 
-class BorrowBase(BaseModel):
-    """Basic information of borrowing"""
+class BorrowCreate(BaseModel):
+    """Simplified borrowing creation model"""
     copy_id: int = Field(..., description="Book copy ID", example=1)
-    student_id: int = Field(..., description="Student ID", example=1)
-    due_date: datetime = Field(..., description="Due date", example="2023-02-01T23:59:59")
-    
-    @field_validator('due_date')
-    def validate_due_date(cls, v):
-        """Validate that the due date is after the current date"""
-        if v < datetime.now():
-            raise ValueError('The due date must be after the current date')
-        return v
+    matric_number: str = Field(..., description="Student matriculation number")
+    loan_days: Optional[int] = Field(None, ge=14, le=30, description="Loan period in days (default: 14)", example=14)
 
 
-class BorrowCreate(BorrowBase):
-    """Model used when creating a borrowing record"""
-    borrow_date: Optional[datetime] = Field(
-        None,
-        description="Borrow date (defaults to current time if not provided)",
-        example="2023-01-01T12:00:00"
-    )
-
-    @field_validator('borrow_date')
-    def set_borrow_date(cls, v):
-        """Set borrow date to current time if not provided"""
-        return v or datetime.now()
-
-
-class BorrowUpdate(BaseModel):
-    """Model used when updating a borrowing record"""
-    extension_date: Optional[datetime] = Field(
-        None,
-        description="New due date after extension",
-        example="2023-02-15T23:59:59"
-    )
-    return_date: Optional[datetime] = Field(
-        None,
-        description="Date when book was returned",
-        example="2023-01-25T14:30:00"
-    )
-    status: Optional[BorrowStatus] = Field(
-        None,
-        description="Borrow status",
-        example="returned"
-    )
-    
-    @field_validator('extension_date')
-    def validate_extension_date(cls, v):
-        """Validate that the extension date is after the current date"""
-        if v is not None and v < datetime.now():
-            raise ValueError('The extension date must be after the current date')
-        return v
-    
-    @field_validator('return_date')
-    def validate_return_date(cls, v):
-        """Validate that the return date is not in the future"""
-        if v is not None and v > datetime.now():
-            raise ValueError('The return date cannot be in the future')
-        return v
-
-
-class BorrowResponse(BorrowBase):
-    """Model used when returning borrowing basic information"""
+class BorrowResponse(BaseModel):
+    """Basic borrowing response model"""
     borrow_id: int
+    copy_id: int
+    matric_number: str
     borrow_date: datetime
+    due_date: datetime
     status: BorrowStatus
     extension_date: Optional[datetime] = None
     return_date: Optional[datetime] = None
-    is_overdue: bool = Field(
-        ...,
-        description="Indicates if the loan is currently overdue",
-        example=False
-    )
-    days_remaining: Optional[int] = Field(
-        None,
-        description="Days remaining until due (negative if overdue)",
-        example=15
-    )
+    is_overdue: bool
+    days_remaining: Optional[int] = None
+
+    @field_validator('borrow_date', 'due_date', 'return_date', 'extension_date', mode='before')
+    def ensure_timezone(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """Ensure all dates have timezone information"""
+        if v is not None and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "borrow_id": 1,
                 "copy_id": 1,
-                "student_id": 1,
-                "borrow_date": "2023-01-01T12:00:00",
-                "due_date": "2023-02-01T23:59:59",
+                "matric_number": "A0123456Z",
+                "borrow_date": "2023-01-01T12:00:00Z",
+                "due_date": "2023-01-15T23:59:59Z",
                 "extension_date": None,
                 "return_date": None,
                 "status": "borrowed",
                 "is_overdue": False,
-                "days_remaining": 31
+                "days_remaining": 14
             }
         }
 
 
 class BorrowDetail(BorrowResponse):
-    """Model used when returning detailed borrowing information including associated data"""
-    book_title: str
-    isbn: Optional[str] = None
-    call_number: str
-    student_name: str
-    student_matric_number: str
-    student_email: str
+    """Detailed borrowing response model with book and student info"""
+    book_title: Optional[str] = None
+    call_number: Optional[str] = None
+    student_name: Optional[str] = None
+    student_email: Optional[str] = None
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "borrow_id": 1,
                 "copy_id": 1,
-                "student_id": 1,
-                "borrow_date": "2023-01-01T12:00:00",
-                "due_date": "2023-02-01T23:59:59",
+                "matric_number": "A0123456Z",
+                "borrow_date": "2023-01-01T12:00:00Z",
+                "due_date": "2023-01-15T23:59:59Z",
                 "extension_date": None,
                 "return_date": None,
                 "status": "borrowed",
                 "is_overdue": False,
-                "days_remaining": 31,
+                "days_remaining": 14,
                 "book_title": "Dream of the Red Chamber",
-                "isbn": "9787020002207",
-                "call_number": "F12.345",
+                "call_number": "LIT-123-1",
                 "student_name": "John Smith",
-                "student_matric_number": "S12345678Z",
                 "student_email": "john.smith@university.edu"
             }
         }
-
-
-class BorrowSummary(BaseModel):
-    """Summary of a student's borrowing history"""
-    student_id: int
-    student_name: str
-    student_email: str
-    current_borrows: int
-    total_borrows: int
-    overdue_borrows: int
-    borrowing_history: List[BorrowResponse]
-
-    class Config:
-        orm_mode = True
-        schema_extra = {
-            "example": {
-                "student_id": 1,
-                "student_name": "John Smith",
-                "student_email": "john.smith@university.edu",
-                "current_borrows": 2,
-                "total_borrows": 15,
-                "overdue_borrows": 0,
-                "borrowing_history": [
-                    {
-                        "borrow_id": 1,
-                        "copy_id": 1,
-                        "student_id": 1,
-                        "borrow_date": "2023-01-01T12:00:00",
-                        "due_date": "2023-02-01T23:59:59",
-                        "extension_date": None,
-                        "return_date": None,
-                        "status": "borrowed",
-                        "is_overdue": False,
-                        "days_remaining": 31
-                    }
-                ]
-            }
-        }
-
-
-class BorrowingExtendRequest(BaseModel):
-    """Request model for extending a borrowing"""
-    borrow_id: int
-    days: int = Field(..., ge=1, le=30, description="Number of days to extend")
-    reason: Optional[str] = None
 
 
 class BorrowingStats(BaseModel):
@@ -195,8 +94,37 @@ class BorrowingStats(BaseModel):
     average_days_kept: float
     most_borrowed_books: List[Dict[str, Any]]
     most_active_students: List[Dict[str, Any]]
-    borrowings_by_category: List[Dict[str, Any]]
     borrowings_by_month: List[Dict[str, Any]]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_borrowings": 250,
+                "active_borrowings": 45,
+                "overdue_borrowings": 12,
+                "average_days_kept": 18.5,
+                "most_borrowed_books": [
+                    {
+                        "book_id": 1,
+                        "title": "Dream of the Red Chamber",
+                        "borrow_count": 15
+                    }
+                ],
+                "most_active_students": [
+                    {
+                        "matric_number": "A0123456Z",
+                        "name": "John Smith",
+                        "borrow_count": 8
+                    }
+                ],
+                "borrowings_by_month": [
+                    {
+                        "month": "2023-01",
+                        "count": 35
+                    }
+                ]
+            }
+        }
 
 
 class ActiveBorrowingsResponse(BaseModel):
@@ -205,3 +133,28 @@ class ActiveBorrowingsResponse(BaseModel):
     returned_count: int
     overdue_count: int
     borrowings: List[BorrowDetail]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_count": 45,
+                "returned_count": 0,
+                "overdue_count": 12,
+                "borrowings": [
+                    {
+                        "borrow_id": 1,
+                        "copy_id": 1,
+                        "matric_number": "A0123456Z",
+                        "borrow_date": "2023-01-01T12:00:00Z",
+                        "due_date": "2023-01-15T23:59:59Z",
+                        "status": "borrowed",
+                        "is_overdue": False,
+                        "days_remaining": 14,
+                        "book_title": "Dream of the Red Chamber",
+                        "call_number": "LIT-123-1",
+                        "student_name": "John Smith",
+                        "student_email": "john.smith@university.edu"
+                    }
+                ]
+            }
+        }

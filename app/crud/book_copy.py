@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 from fastapi import HTTPException, status
 from datetime import datetime, timedelta
+import uuid
 
 from ..models.book_copy import BookCopy
 from ..models.book import Book
@@ -27,9 +28,14 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
             joinedload(BookCopy.book)
         ).filter(BookCopy.copy_id == copy_id).first()
         
-        if copy and copy.book:
+        if copy:
             # Add book title for easier access
-            setattr(copy, "book_title", copy.book.title)
+            if copy.book:
+                setattr(copy, "book_title", copy.book.title)
+            
+            # Ensure qr_code is a string
+            if copy.qr_code is not None:
+                copy.qr_code = str(copy.qr_code)
         
         return copy
     
@@ -48,13 +54,39 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         """
         Get book copy by call number
         """
-        return self.get_by_identifier(db, "call_number", call_number)
+        copy = db.query(BookCopy).filter(BookCopy.call_number == call_number).first()
+        
+        # Ensure qr_code is a string
+        if copy and copy.qr_code is not None:
+            copy.qr_code = str(copy.qr_code)
+            
+            # Add book title if available
+            if copy.book:
+                setattr(copy, "book_title", copy.book.title)
+        
+        return copy
     
     def get_by_qr_code(self, db: Session, qr_code: str) -> Optional[BookCopy]:
         """
         Get book copy by QR code
         """
-        return self.get_by_identifier(db, "qr_code", qr_code)
+        try:
+            # Try to convert qr_code to UUID before querying
+            uuid_obj = uuid.UUID(qr_code)
+            copy = db.query(BookCopy).filter(BookCopy.qr_code == uuid_obj).first()
+            
+            # Ensure qr_code is converted to string for response
+            if copy and copy.qr_code is not None:
+                copy.qr_code = str(copy.qr_code)
+                
+                # Add book title if available
+                if copy.book:
+                    setattr(copy, "book_title", copy.book.title)
+            
+            return copy
+        except ValueError:
+            # If not a valid UUID format, return None
+            return None
     
     def get_by_book(
         self, db: Session, *, book_id: int, skip: int = 0, limit: int = 100
@@ -95,10 +127,14 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         
         copies = query.limit(limit).all()
         
-        # Add book title for easier access
+        # Add book title for easier access and convert UUID to string
         for copy in copies:
             if copy.book:
                 setattr(copy, "book_title", copy.book.title)
+            
+            # Ensure qr_code is a string
+            if copy.qr_code is not None:
+                copy.qr_code = str(copy.qr_code)
         
         return copies
     
@@ -114,37 +150,20 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         ).offset(skip).limit(limit).all()
     
     def create(self, db: Session, *, obj_in: BookCopyCreate) -> BookCopy:
-        """
-        Create a new book copy
-        """
-        # Check if call number already exists
-        if obj_in.call_number:
-            existing_copy = self.get_by_call_number(db, call_number=obj_in.call_number)
-            if existing_copy:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Call number already exists"
-                )
-        
-        # Generate QR code if not provided
-        if not obj_in.qr_code:
-            # In a real implementation, this would be a more sophisticated algorithm
-            obj_in.qr_code = f"QR-{obj_in.book_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        
-        # Convert Pydantic model to dict and create DB object
-        obj_data = obj_in.dict()
+        obj_data = obj_in.dict(exclude={"qr_code"})
         db_obj = BookCopy(**obj_data)
+        
+        
         
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         
-        # Add book title if available
+       
         if hasattr(db_obj, 'book') and db_obj.book:
             setattr(db_obj, "book_title", db_obj.book.title)
         
         return db_obj
-    
     def update_status(
         self, db: Session, *, copy_id: int, status_update: BookCopyStatusUpdate
     ) -> BookCopy:
@@ -242,10 +261,14 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         
         copies = query.offset(skip).limit(limit).all()
         
-        # Add book title for easier access
+        # Add book title for easier access and convert UUID to string
         for copy in copies:
             if copy.book:
                 setattr(copy, "book_title", copy.book.title)
+            
+            # Ensure qr_code is a string
+            if copy.qr_code is not None:
+                copy.qr_code = str(copy.qr_code)
         
         return copies
 

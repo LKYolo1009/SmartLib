@@ -53,11 +53,11 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
             setattr(book, "available_copies", available_copies)
             setattr(book, "total_copies", len(book.copies))
             
-            # Add names for easier access
-            setattr(book, "author_name", book.author.name if book.author else None)
-            setattr(book, "publisher_name", book.publisher.name if book.publisher else None)
-            setattr(book, "language_name", book.language.name if book.language else None)
-            setattr(book, "category_name", book.category.name if book.category else None)
+            # Add required fields for BookDetail schema
+            setattr(book, "author_name", book.author.author_name if book.author else None)
+            setattr(book, "publisher_name", book.publisher.publisher_name if book.publisher else None)
+            setattr(book, "language_name", book.language.language_name if book.language else None)
+            setattr(book, "category_name", book.category.category_name if book.category else None)
         
         return book
     
@@ -84,7 +84,7 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         """
         search_query = f"%{author_name}%"
         return db.query(Book).join(Book.author).filter(
-            Author.name.ilike(search_query)
+            Author.author_name.ilike(search_query)
         ).limit(limit).all()
     
     def search_by_publisher_name(self, db: Session, *, publisher_name: str, limit: int = 20) -> List[Book]:
@@ -93,7 +93,7 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         """
         search_query = f"%{publisher_name}%"
         return db.query(Book).join(Book.publisher).filter(
-            Publisher.name.ilike(search_query)
+            Publisher.publisher_name.ilike(search_query)
         ).limit(limit).all()
     
     def search_by_category_name(self, db: Session, *, category_name: str, limit: int = 20) -> List[Book]:
@@ -136,9 +136,9 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         if title:
             filters.append(Book.title.ilike(f"%{title}%"))
         if author_name:
-            filters.append(Author.name.ilike(f"%{author_name}%"))
+            filters.append(Author.author_name.ilike(f"%{author_name}%"))
         if publisher_name:
-            filters.append(Publisher.name.ilike(f"%{publisher_name}%"))
+            filters.append(Publisher.publisher_name.ilike(f"%{publisher_name}%"))
         if category_name:
             filters.append(Category.name.ilike(f"%{category_name}%"))
         if language_name:
@@ -160,7 +160,7 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
             if existing_book:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="此ISBN已存在"
+                    detail="this ISBN already exists"
                 )
         
         # Convert Pydantic model to dict and create DB object
@@ -181,6 +181,7 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
     ) -> Book:
         """
         Update book information
+        Supports both full BookUpdate object and partial dictionary updates
         """
         if isinstance(obj_in, dict):
             update_data = obj_in
@@ -193,10 +194,19 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
             if existing_book and existing_book.book_id != db_obj.book_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="此ISBN已被其他图书使用"
+                    detail="this book already exists"
                 )
         
-        return super().update(db, db_obj=db_obj, obj_in=update_data)
+        # Update the db object with new values
+        for field in update_data:
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, update_data[field])
+        
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        
+        return db_obj
     
     def check_availability(self, db: Session, book_id: int) -> Dict[str, Any]:
         """
@@ -206,7 +216,7 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         if not book:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="图书未找到"
+                detail="Book not found"
             )
         
         # Get all available copies
@@ -230,14 +240,12 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         author_name: Optional[str] = None,
         publisher_name: Optional[str] = None,
         category_name: Optional[str] = None,
-        isbn: Optional[str] = None,
-        publication_year: Optional[int] = None,
         language_name: Optional[str] = None,
         limit: int = 20,
         exact_match: bool = False
     ) -> List[Book]:
         """
-        Unified search function with support for multiple criteria
+        Search books with multiple criteria
         """
         query = db.query(Book)
         
@@ -253,41 +261,24 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         
         # Build filters
         filters = []
-        
         if title:
             if exact_match:
                 filters.append(func.lower(Book.title) == func.lower(title))
             else:
                 filters.append(Book.title.ilike(f"%{title}%"))
-        
         if author_name:
-            filters.append(Author.name.ilike(f"%{author_name}%"))
-        
+            filters.append(Author.author_name.ilike(f"%{author_name}%"))
         if publisher_name:
-            filters.append(Publisher.name.ilike(f"%{publisher_name}%"))
-        
+            filters.append(Publisher.publisher_name.ilike(f"%{publisher_name}%"))
         if category_name:
             filters.append(Category.name.ilike(f"%{category_name}%"))
-        
-        if isbn:
-            if '-' in isbn or not isbn.isdigit():
-                # Handle ISBN with hyphens or non-digit characters
-                clean_isbn = ''.join(c for c in isbn if c.isdigit())
-                filters.append(func.replace(Book.isbn, '-', '').ilike(f"%{clean_isbn}%"))
-            else:
-                filters.append(Book.isbn.ilike(f"%{isbn}%"))
-        
-        if publication_year:
-            filters.append(Book.publication_year == publication_year)
-        
         if language_name:
             filters.append(Language.name.ilike(f"%{language_name}%"))
         
-        # Apply filters
+        # Apply filters if any
         if filters:
             query = query.filter(or_(*filters))
         
-        # Apply limit and return results
         return query.limit(limit).all()
 
     def general_search(
@@ -308,9 +299,9 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
             or_(
                 Book.title.ilike(search_pattern),
                 Book.isbn.ilike(search_pattern),
-                Author.name.ilike(search_pattern),
-                Publisher.name.ilike(search_pattern),
-                Category.name.ilike(search_pattern)
+                Author.author_name.ilike(search_pattern),
+                Publisher.publisher_name.ilike(search_pattern),
+                Category.category_name.ilike(search_pattern)
             )
         ).limit(limit)
         

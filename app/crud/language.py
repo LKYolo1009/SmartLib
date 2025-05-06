@@ -7,7 +7,7 @@ from ..schemas.language import LanguageCreate, LanguageUpdate
 from .base import CRUDBase
 
 class CRUDLanguage(CRUDBase[Language, LanguageCreate, LanguageUpdate]):
-    """语言CRUD操作类"""
+    """Language CRUD operations class"""
 
     def get(self, db: Session, language_code: str) -> Optional[Language]:
         """
@@ -46,20 +46,20 @@ class CRUDLanguage(CRUDBase[Language, LanguageCreate, LanguageUpdate]):
         :param obj_in: 包含语言数据的schema
         :return: 创建的语言对象
         """
-        # 检查语言代码是否已存在
+        # Check if language code already exists
         existing_language = self.get(db, language_code=obj_in.language_code)
         if existing_language:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="语言代码已存在"
+                detail="Language code already exists"
             )
         
-        # 检查语言名称是否已存在
+        # Check if language name already exists
         existing_name = self.get_by_name(db, language_name=obj_in.language_name)
         if existing_name:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="语言名称已存在"
+                detail="Language name already exists"
             )
         
         db_obj = Language(
@@ -71,5 +71,5 @@ class CRUDLanguage(CRUDBase[Language, LanguageCreate, LanguageUpdate]):
         db.refresh(db_obj)
         return db_obj
 
-# 创建语言CRUD操作实例
+# Create language CRUD instance
 language_crud = CRUDLanguage(Language)

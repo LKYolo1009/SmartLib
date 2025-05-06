@@ -3,17 +3,27 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.crud import author as author_crud
-from app.crud import category as category_crud
-from app.crud import publisher as publisher_crud
-from app.crud import language as language_crud
+from app.crud.author import author_crud
+from app.crud.category import category_crud
+from app.crud.publisher import publisher_crud
+from app.crud.language import language_crud
 from app.schemas.author import AuthorCreate, AuthorResponse, AuthorUpdate
 from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.schemas.publisher import PublisherCreate, PublisherResponse, PublisherUpdate
 from app.schemas.language import LanguageCreate, LanguageResponse, LanguageUpdate
 
 router = APIRouter()
+import logging
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,  # Set logging level
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Output to console
+        logging.FileHandler('app.log')  # Save to file simultaneously
+    ]
+)
 # Author endpoints
 @router.get("/authors/", response_model=List[AuthorResponse], tags=["Metadata"])
 def get_authors(
@@ -36,6 +46,8 @@ def create_author(
     Create a new author.
     """
     return author_crud.create(db=db, obj_in=author_in)
+
+
 
 @router.get("/authors/{author_id}", response_model=AuthorResponse, tags=["Metadata"])
 def get_author(
@@ -73,18 +85,41 @@ def update_author(
     return author_crud.update(db=db, db_obj=db_author, obj_in=author_in)
 
 # Category endpoints
-@router.get("/categories/", response_model=List[CategoryResponse], tags=["Metadata"])
+
+@router.get("/categories", response_model=List[CategoryResponse], tags=["Metadata"])
 def get_categories(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
+    main_only: bool = False,
 ):
     """
     Retrieve a list of categories.
+    
+    - **main_only**: If true, returns only main categories (no parent)
     """
+    if main_only:
+        return category_crud.get_main_categories(db)
     return category_crud.get_multi(db, skip=skip, limit=limit)
 
-@router.post("/categories/", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
+@router.get("/categories/{category_id}/subcategories", response_model=List[CategoryResponse], tags=["Metadata"])
+def get_subcategories(
+    *,
+    db: Session = Depends(get_db),
+    category_id: int,
+):
+    """
+    Retrieve all subcategories for a specific category.
+    """
+    db_category = category_crud.get(db, category_id=category_id)
+    if not db_category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+    return category_crud.get_subcategories(db, parent_id=category_id)
+
+@router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
 def create_category(
     *,
     db: Session = Depends(get_db),
@@ -104,34 +139,41 @@ def get_category(
     """
     Retrieve detailed information about a category.
     """
-    db_category = category_crud.get(db, id=category_id)
+    db_category = category_crud.get(db, category_id=category_id)
     if not db_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Category not found"
         )
-    return db_category
+    
 
-@router.put("/categories/{category_id}", response_model=CategoryResponse, tags=["Metadata"])
-def update_category(
-    *,
-    db: Session = Depends(get_db),
-    category_id: int,
-    category_in: CategoryUpdate,
-):
-    """
-    Update category information.
-    """
-    db_category = category_crud.get(db, id=category_id)
-    if not db_category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
-        )
-    return category_crud.update(db=db, db_obj=db_category, obj_in=category_in)
+    result = db_category.__dict__.copy()
+    if db_category.parent:
+        result["parent_name"] = db_category.parent.category_name
+    
+    return result
+
+# category is fixed
+# @router.put("/  /{category_id}", response_model=CategoryResponse, tags=["Metadata"])
+# def update_category(
+#     *,
+#     db: Session = Depends(get_db),
+#     category_id: int,
+#     category_in: CategoryUpdate,
+# ):
+#     """
+#     Update category information.
+#     """
+#     db_category = category_crud.get(db, category_id=category_id)
+#     if not db_category:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Category not found"
+#         )
+#     return category_crud.update(db=db, db_obj=db_category, obj_in=category_in)
 
 # Publisher endpoints
-@router.get("/publishers/", response_model=List[PublisherResponse], tags=["Metadata"])
+@router.get("/publishers", response_model=List[PublisherResponse], tags=["Metadata"])
 def get_publishers(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -142,106 +184,30 @@ def get_publishers(
     """
     return publisher_crud.get_multi(db, skip=skip, limit=limit)
 
-@router.post("/publishers/", response_model=PublisherResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
+#Done
+@router.post("/publishers", response_model=PublisherResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
 def create_publisher(
     *,
     db: Session = Depends(get_db),
-    publisher_in: PublisherCreate,
+    publisher_in: PublisherCreate
 ):
     """
-    Create a new publisher.
+    Create a new publisher or return existing one.
+    If publisher exists, return it.
+    If not exists, create new one with auto-incremented publisher_id.
     """
-    return publisher_crud.create(db=db, obj_in=publisher_in)
-
-@router.get("/publishers/{publisher_id}", response_model=PublisherResponse, tags=["Metadata"])
-def get_publisher(
-    *,
-    db: Session = Depends(get_db),
-    publisher_id: int,
-):
-    """
-    Retrieve detailed information about a publisher.
-    """
-    db_publisher = publisher_crud.get(db, id=publisher_id)
-    if not db_publisher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Publisher not found"
-        )
-    return db_publisher
-
-@router.put("/publishers/{publisher_id}", response_model=PublisherResponse, tags=["Metadata"])
-def update_publisher(
-    *,
-    db: Session = Depends(get_db),
-    publisher_id: int,
-    publisher_in: PublisherUpdate,
-):
-    """
-    Update publisher information.
-    """
-    db_publisher = publisher_crud.get(db, id=publisher_id)
-    if not db_publisher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Publisher not found"
-        )
-    return publisher_crud.update(db=db, db_obj=db_publisher, obj_in=publisher_in)
-
-# Language endpoints
-@router.get("/languages/", response_model=List[LanguageResponse], tags=["Metadata"])
-def get_languages(
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
-):
-    """
-    Retrieve a list of languages.
-    """
-    return language_crud.get_multi(db, skip=skip, limit=limit)
-
-@router.post("/languages/", response_model=LanguageResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
-def create_language(
-    *,
-    db: Session = Depends(get_db),
-    language_in: LanguageCreate,
-):
-    """
-    Create a new language.
-    """
-    return language_crud.create(db=db, obj_in=language_in)
-
-@router.get("/languages/{language_id}", response_model=LanguageResponse, tags=["Metadata"])
-def get_language(
-    *,
-    db: Session = Depends(get_db),
-    language_id: int,
-):
-    """
-    Retrieve detailed information about a language.
-    """
-    db_language = language_crud.get(db, id=language_id)
-    if not db_language:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Language not found"
-        )
-    return db_language
-
-@router.put("/languages/{language_id}", response_model=LanguageResponse, tags=["Metadata"])
-def update_language(
-    *,
-    db: Session = Depends(get_db),
-    language_id: int,
-    language_in: LanguageUpdate,
-):
-    """
-    Update language information.
-    """
-    db_language = language_crud.get(db, id=language_id)
-    if not db_language:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Language not found"
-        )
-    return language_crud.update(db=db, db_obj=db_language, obj_in=language_in)
+    # First check if publisher already exists
+    existing_publisher = publisher_crud.get_by_name(db, name=publisher_in.publisher_name)
+    if existing_publisher:
+        return existing_publisher
+    
+    # If not exists, get the max publisher_id and increment
+    max_id = publisher_crud.get_max_id(db)
+    new_id = (max_id or 0) + 1
+    
+    # Create new publisher with the incremented ID
+    return publisher_crud.create_with_id(
+        db=db, 
+        obj_in=publisher_in, 
+        publisher_id=new_id
+    )

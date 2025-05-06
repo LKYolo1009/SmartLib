@@ -7,9 +7,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
-    # 令牌过期时间（分钟）
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 天
-    # CORS设置
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
     @field_validator("BACKEND_CORS_ORIGINS", mode='before')
@@ -18,14 +16,12 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, (list, str)):
             return v
-        raise ValueError(v)
 
-    # 数据库连接设置
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "123456"
-    POSTGRES_DB: str = "mylibrary"
-    SQLALCHEMY_DATABASE_URI: Optional[str] = None
+    POSTGRES_DB: str = "MyLibrary2"
+    SQLALCHEMY_DATABASE_URI: Optional[str] = "postgresql://testuser:000000@localhost/MyLibrary2"
 
     @field_validator("SQLALCHEMY_DATABASE_URI", mode='before')
     def assemble_db_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
