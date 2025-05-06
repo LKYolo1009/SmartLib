@@ -23,7 +23,7 @@ class LanguageResponse(LanguageBase):
     """Model used when returning language information"""
     class Config:
         orm_mode = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "language_code": "CHS",
                 "language_name": "Simplified Chinese"

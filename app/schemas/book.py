@@ -56,7 +56,7 @@ class BookCreate(BookBase):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "Dream of the Red Chamber",
                 "isbn": "9787020002207",
@@ -81,7 +81,7 @@ class BookUpdate(BookBase):
     category_id: Optional[int] = Field(None, description="Category ID", example=1)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "Dream of the Red Chamber",
                 "isbn": "9787020002207",
@@ -102,7 +102,7 @@ class BookResponse(BookBase):
     
     class Config:
         from_attributes  = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "book_id": 1,
                 "title": "Dream of the Red Chamber",
@@ -128,7 +128,7 @@ class BookDetail(BookResponse):
     
     class Config:
         from_attributes = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "book_id": 1,
                 "title": "Dream of the Red Chamber",
@@ -164,7 +164,7 @@ class BookSearchParams(BaseModel):
     sort_desc: bool = Field(False, description="Sort in descending order if True")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "red chamber",
                 "author_id": 1,
@@ -191,7 +191,7 @@ class BookBatchStatusUpdate(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "book_ids": [1, 2, 3],
                 "status": "unpublished",
@@ -210,7 +210,7 @@ class BookAvailabilityResponse(BaseModel):
     is_available: bool
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "book_id": 1,
                 "title": "Dream of the Red Chamber",

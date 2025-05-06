@@ -39,7 +39,7 @@ class CategoryResponse(CategoryBase):
     
     class Config:
         orm_mode = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "category_id": 2,
                 "category_name": "Science",

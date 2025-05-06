@@ -17,5 +17,5 @@ class Category(Base):
     books = relationship("Book", back_populates="category")
     
     __table_args__ = (
-        CheckConstraint("category_code ~ '^[0-9]{3}(\.[0-9]+)?$'", name='valid_dewey_code'),
+        CheckConstraint(r"category_code ~ '^[0-9]{3}(\.[0-9]+)?$'", name='valid_dewey_code'),
     )

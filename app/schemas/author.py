@@ -15,7 +15,7 @@ class AuthorResponse(AuthorBase):
 
     class Config:
         orm_mode = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "author_id": 1,
                 "author_name": "Lu Xun"

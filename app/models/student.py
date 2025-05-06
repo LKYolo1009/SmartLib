@@ -32,13 +32,13 @@ class Student(Base):
     __table_args__ = (
         # Check constraint for matric_number: A + 8 digits + 1 letter
         CheckConstraint(
-            "matric_number ~ '^A[0-9]{8}[A-Za-z]$'",
+            r"matric_number ~ '^A[0-9]{8}[A-Za-z]$'",
             name='valid_matric'
         ),
         
         # Check constraint for email: Must end with @u.nus.edu
         CheckConstraint(
-            "email ~ '^[A-Za-z0-9._%+-]+@u\.nus\.edu$'",
+            r"email ~ '^[A-Za-z0-9._%+-]+@u\.nus\.edu$'",
             name='valid_email'
         ),
         

@@ -30,7 +30,7 @@ class UserResponse(UserBase):
 
     class Config:
         orm_mode = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "username": "admin"
