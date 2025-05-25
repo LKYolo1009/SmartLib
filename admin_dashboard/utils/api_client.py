@@ -160,6 +160,7 @@ class APIClient:
             ]
         return data
 
+
     @staticmethod
     def get_popular_books(limit: int = 10, start_date: datetime = None, end_date: datetime = None) -> List[Dict]:
         """Get popular books with mock data fallback"""
@@ -243,37 +244,27 @@ class APIClient:
                 "start_date": start_date.strftime("%Y-%m-%d"),
                 "end_date": end_date.strftime("%Y-%m-%d")
             }
-            data = fetch_api_data("library_utilization", params)
+            # 直接使用 get_api_data 而不是 fetch_api_data
+            data = APIClient.get_api_data("library_utilization", params)
             logger.debug(f"Raw utilization data: {data}")
             
             if not data:
                 logger.warning("No utilization data received from API")
                 return pd.DataFrame(columns=["date", "utilization_rate"])
             
-            # 如果API返回的是字典，转换为DataFrame格式
-            if isinstance(data, dict):
-                logger.debug("Converting dictionary data to DataFrame format")
-                # 处理每日利用率数据
-                daily_data = []
-                for date, count in data.get("daily_utilization", {}).items():
-                    daily_data.append({
-                        "date": date,
-                        "utilization_rate": count
-                    })
-                
-                if daily_data:
-                    return pd.DataFrame(daily_data)
-                else:
-                    logger.warning("No daily utilization data found in response")
-                    return pd.DataFrame(columns=["date", "utilization_rate"])
+            # 处理每日利用率数据
+            daily_data = []
+            for date, count in data.get("daily_utilization", {}).items():
+                daily_data.append({
+                    "date": date,
+                    "utilization_rate": count
+                })
             
-            # 如果API返回的是列表，转换为DataFrame格式
-            if isinstance(data, list):
-                logger.debug("Converting list data to DataFrame format")
-                return pd.DataFrame(data)
-            
-            logger.warning(f"Unexpected data format: {type(data)}")
-            return pd.DataFrame(columns=["date", "utilization_rate"])
+            if daily_data:
+                return pd.DataFrame(daily_data)
+            else:
+                logger.warning("No daily utilization data found in response")
+                return pd.DataFrame(columns=["date", "utilization_rate"])
             
         except Exception as e:
             logger.error(f"Error in get_library_utilization: {str(e)}", exc_info=True)

@@ -151,20 +151,25 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
     
     # Calculate and add trend line for borrowings
     if 'borrowings' in df.columns and len(df) > 1:
-        z = np.polyfit(range(len(df)), df['borrowings'], 1)
-        trend_line = np.poly1d(z)(range(len(df)))
-        
-        fig.add_trace(go.Scatter(
-            x=df['date'],
-            y=trend_line,
-            name='📈 Borrowing Trend',
-            line=dict(color='rgba(255,0,0,0.5)', width=2, dash='dot'),
-            hovertemplate='<b>📈 Trend Line</b><br>' +
-                         'Date: %{x|%Y-%m-%d}<br>' +
-                         'Trend Value: %{y:.1f}<br>' +
-                         '<extra></extra>',
-            showlegend=True
-        ))
+        try:
+            import numpy as np
+            z = np.polyfit(range(len(df)), df['borrowings'], 1)
+            trend_line = np.poly1d(z)(range(len(df)))
+            
+            fig.add_trace(go.Scatter(
+                x=df['date'],
+                y=trend_line,
+                name='📈 Borrowing Trend',
+                line=dict(color='rgba(255,0,0,0.5)', width=2, dash='dot'),
+                hovertemplate='<b>📈 Trend Line</b><br>' +
+                             'Date: %{x|%Y-%m-%d}<br>' +
+                             'Trend Value: %{y:.1f}<br>' +
+                             '<extra></extra>',
+                showlegend=True
+            ))
+        except ImportError:
+            # Skip trend line if numpy is not available
+            pass
     
     fig.update_layout(
         title=dict(
@@ -466,63 +471,91 @@ def create_overdue_analysis_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
 
     return fig
 
-def create_utilization_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure:
+def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.Figure:
     """Create library utilization time series chart"""
-    # Convert to DataFrame if needed
-    if isinstance(data, list):
+    # 处理字典格式的输入
+    if isinstance(data, dict):
+        if 'daily_utilization' in data:
+            # 转换 daily_utilization 字典为 DataFrame
+            daily_data = []
+            for date, count in data['daily_utilization'].items():
+                daily_data.append({
+                    'date': date,
+                    'utilization_rate': count
+                })
+            df = pd.DataFrame(daily_data)
+        else:
+            return create_empty_chart("Invalid utilization data format: missing daily_utilization")
+    # 处理列表格式的输入
+    elif isinstance(data, list):
         if not data:
             return create_empty_chart("No utilization data available")
         df = pd.DataFrame(data)
-    else:
+    # 处理 DataFrame 格式的输入
+    elif isinstance(data, pd.DataFrame):
         df = data
-    
-    if df.empty or 'date' not in df.columns or 'utilization_rate' not in df.columns:
+    else:
         return create_empty_chart("Invalid utilization data format")
     
-    # Convert date column to datetime if it's not already
+    if df.empty or 'date' not in df.columns or 'utilization_rate' not in df.columns:
+        return create_empty_chart("Invalid utilization data format: missing required columns")
+    
+    # 转换日期列为 datetime
     if df['date'].dtype == 'object':
         df['date'] = pd.to_datetime(df['date'])
     
+    # 创建图表
     fig = px.line(
         df,
         x="date",
         y="utilization_rate",
-        title="📊 Library Utilization Trend",
+        title="📈 Library Utilization Trend",
         template=CHART_CONFIG["template"],
-        line_shape="spline"  # Smooth line
+        line_shape="spline"
     )
     
-    # Add average line
+    # 添加平均值线
     avg_utilization = df['utilization_rate'].mean()
     fig.add_hline(
         y=avg_utilization,
         line_dash="dash",
-        line_color="red",
-        annotation_text=f"Average Utilization: {avg_utilization:.1f}%",
-        annotation_position="top right"
+        line_color=CHART_CONFIG['colors']['primary'],
+        annotation_text=f"Average: {avg_utilization:.1f}%",
+        annotation_position="top right",
+        annotation_font=dict(
+            size=12,
+            color="#2c3e50"  # 使用固定颜色替代不存在的键
+        )
     )
     
+    # 更新布局
     fig.update_layout(
         height=CHART_CONFIG["height"],
         title=dict(
-            font=dict(size=18, color="#2c3e50"),
+            font=dict(
+                size=18,
+                color="#2c3e50"  # 使用固定颜色替代不存在的键
+            ),
             x=0.5,
             xanchor='center'
         ),
         xaxis_title="Date",
         yaxis_title="Utilization Rate (%)",
         showlegend=False,
-        margin=dict(l=60, r=60, t=80, b=60)
+        margin=dict(l=60, r=60, t=80, b=60),
+        paper_bgcolor="rgba(0,0,0,0)",  # 使用透明背景
+        plot_bgcolor="rgba(0,0,0,0)"   # 使用透明背景
+    )
+    
+    # 更新轨迹
+    fig.update_traces(
+        line=dict(
+            color=CHART_CONFIG['colors']['primary'],
+            width=3
+        ),
+        hovertemplate='<b>Date: %{x|%Y-%m-%d}</b><br>' +
+                     'Utilization Rate: %{y:.1f}%<br>' +
+                     '<extra></extra>'
     )
     
     return fig
-
-# Import numpy for trend calculation
-try:
-    import numpy as np
-except ImportError:
-    # Fallback if numpy is not available
-    def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure:
-        """Fallback version without trend line"""
-        # ... (same as above but without trend line calculation)
-        pass

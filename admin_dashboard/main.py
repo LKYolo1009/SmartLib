@@ -336,27 +336,10 @@ with col2:
         utilization_data = APIClient.get_library_utilization(start_date, end_date)
         logger.debug(f"Utilization data: {utilization_data}")
         
-        if utilization_data is None or utilization_data.empty:
+        if utilization_data is None:
             st.warning("No utilization data available for the selected period")
         else:
-            # 检查数据格式
-            if isinstance(utilization_data, dict):
-                # 如果是字典格式，转换为 DataFrame
-                daily_data = []
-                for date, count in utilization_data.get("daily_utilization", {}).items():
-                    daily_data.append({
-                        "date": date,
-                        "utilization_rate": count
-                    })
-                utilization_data = pd.DataFrame(daily_data)
-            
-            # 验证数据格式
-            required_columns = ["date", "utilization_rate"]
-            if all(col in utilization_data.columns for col in required_columns):
-                st.plotly_chart(create_utilization_chart(utilization_data), use_container_width=True)
-            else:
-                st.error("Invalid utilization data format")
-                logger.error(f"Missing required columns in utilization data: {utilization_data.columns}")
+            st.plotly_chart(create_utilization_chart(utilization_data), use_container_width=True)
     except Exception as e:
         logger.error(f"Failed to load utilization data: {str(e)}", exc_info=True)
         st.error(f"Failed to load utilization data: {str(e)}")
