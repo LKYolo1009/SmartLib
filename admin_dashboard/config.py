@@ -15,7 +15,6 @@ ENDPOINTS = {
     "popular_books": f"{API_BASE_URL}/api/v1/statistics/popular-books",
     "student_activity": f"{API_BASE_URL}/api/v1/statistics/student-activity",
     "overdue": f"{API_BASE_URL}/api/v1/statistics/overdue",
-    "overdue_analysis": f"{API_BASE_URL}/api/v1/statistics/overdue-analysis",
     "library_utilization": f"{API_BASE_URL}/api/v1/statistics/library-utilization",
     "category_trends": f"{API_BASE_URL}/api/v1/statistics/category-trends",
     "daily": f"{API_BASE_URL}/api/v1/statistics/daily"

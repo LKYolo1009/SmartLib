@@ -42,7 +42,7 @@ class StudentUpdate(BaseModel):
     """Model used when updating a student - all fields optional"""
     matric_number: Optional[str] = Field(
         None, 
-        description="Matric Number (A + 8 digits + any letter)",
+        description="Matric Number (A + 7 digits + any letter)",
         example="A12345678H"
     )
     full_name: Optional[str] = Field(None, description="Full Name", example="John Doe")

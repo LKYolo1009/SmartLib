@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.api import api_router
 from app.db.session import engine, SessionLocal
-from app.db.base import Base 
+from app.db.base import Base
 from app.core.config import settings
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
         db.close()
     except SQLAlchemyError as e:
         print(f"Failed to connect to the database: {e}")
-    
+
     yield
     print("App is shutting down...")
 
@@ -49,6 +49,7 @@ app = FastAPI(
         {"name": "Students", "description": "Operations with students"},
         {"name": "Borrowing", "description": "Operations with borrowing records"},
         {"name": "Metadata", "description": "Operations with metadata (authors, publishers, categories, languages)"},
+        {"name": "Statistics", "description": "Statistical data and analytics"},
         {"name": "Health", "description": "Health check endpoints"}
     ],
     swagger_ui_parameters={

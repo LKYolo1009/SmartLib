@@ -13,7 +13,7 @@ class Student(Base):
     status = Column(student_status, server_default='active')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
+    telegram_id = Column(String(50), nullable=True, unique=True)
     borrowing_records = relationship("BorrowingRecord", back_populates="student")
 
     @property
@@ -30,9 +30,9 @@ class Student(Base):
         return f"<Student {self.full_name} ({self.matric_number})>"
 
     __table_args__ = (
-        # Check constraint for matric_number: A + 8 digits + 1 letter
+        # Check constraint for matric_number: A + 7 digits + 1 letter
         CheckConstraint(
-            r"matric_number ~ '^A[0-9]{8}[A-Za-z]$'",
+            r"matric_number ~ '^A[0-9]{7}[A-Za-z]$'",
             name='valid_matric'
         ),
         

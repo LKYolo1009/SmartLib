@@ -1,9 +1,20 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pytz
 import sys
 import os
+import logging
+
+# 配置日志
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Add the current directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -76,13 +87,39 @@ st.markdown("""
 def get_cached_data():
     """Get all dashboard data in one go to reduce API calls"""
     try:
+        logger.debug("Fetching dashboard data")
         # Get all data
         kpi_data = APIClient.get_kpi_metrics()
-        popular_books = APIClient.get_popular_books(limit=10)
+        logger.debug(f"KPI data: {kpi_data}")
+        
+        # 根据日期范围选择时间区间
+        if date_range == "Last 7 Days":
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=7)
+        elif date_range == "Last 30 Days":
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
+        elif date_range == "Last 90 Days":
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=90)
+        else:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)  # 默认30天
+        
+        popular_books = APIClient.get_popular_books(limit=10, start_date=start_date, end_date=end_date)
+        logger.debug(f"Popular books: {popular_books}")
+        
         category_stats = APIClient.get_category_stats()
-        student_activity = APIClient.get_student_activity(limit=10)
+        logger.debug(f"Category stats: {category_stats}")
+        
+        student_activity = APIClient.get_student_activity(limit=10, start_date=start_date, end_date=end_date)
+        logger.debug(f"Student activity: {student_activity}")
+        
         overdue_analysis = APIClient.get_overdue_analysis()
+        logger.debug(f"Overdue analysis: {overdue_analysis}")
+        
         overdue_books = APIClient.get_overdue_books()
+        logger.debug(f"Overdue books: {overdue_books}")
         
         return {
             'kpi_data': kpi_data,
@@ -94,6 +131,7 @@ def get_cached_data():
             'success': True
         }
     except Exception as e:
+        logger.error(f"Failed to load dashboard data: {str(e)}", exc_info=True)
         st.error(f"Failed to load dashboard data: {str(e)}")
         return {'success': False, 'error': str(e)}
 
@@ -105,19 +143,49 @@ with st.sidebar:
     st.subheader("📅 Date Range")
     date_range = st.selectbox(
         "Select Time Period",
-        ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Custom Range"]
+        ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Last Year", "Custom Range"]
     )
     
     if date_range == "Custom Range":
-        start_date = st.date_input("Start Date")
-        end_date = st.date_input("End Date")
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input(
+                "Start Date",
+                value=datetime.now() - timedelta(days=30),
+                max_value=datetime.now()
+            )
+        with col2:
+            end_date = st.date_input(
+                "End Date",
+                value=datetime.now(),
+                max_value=datetime.now()
+            )
+        
+        # 验证日期范围
+        if start_date > end_date:
+            st.error("⚠️ Start date cannot be later than end date")
+            st.stop()
+        
+        # 验证日期范围不超过一年
+        if (end_date - start_date).days > 365:
+            st.warning("⚠️ Date range exceeds one year. Data may be limited.")
+        
+        # 转换为datetime对象
         start_date = datetime.combine(start_date, datetime.min.time())
         end_date = datetime.combine(end_date, datetime.max.time())
     else:
-        days_map = {"Last 7 Days": 7, "Last 30 Days": 30, "Last 90 Days": 90}
+        days_map = {
+            "Last 7 Days": 7,
+            "Last 30 Days": 30,
+            "Last 90 Days": 90,
+            "Last Year": 365
+        }
         days = days_map[date_range]
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
+    
+    # 显示选择的日期范围
+    st.info(f"📅 Selected Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     
     # Refresh button
     if st.button("🔄 Refresh Data", use_container_width=True):
@@ -151,12 +219,28 @@ if not cached_data['success']:
     st.stop()
 
 # Extract data from cache
-kpi_data = cached_data['kpi_data']
-popular_books = cached_data['popular_books']
-category_stats = cached_data['category_stats']
-student_activity = cached_data['student_activity']
-overdue_analysis = cached_data['overdue_analysis']
-overdue_books = cached_data['overdue_books']
+try:
+    kpi_data = cached_data['kpi_data']
+    logger.debug(f"KPI data loaded: {kpi_data}")
+    
+    popular_books = cached_data['popular_books'] if isinstance(cached_data['popular_books'], list) else []
+    logger.debug(f"Popular books loaded: {len(popular_books)} items")
+    
+    category_stats = cached_data['category_stats']
+    logger.debug(f"Category stats loaded: {category_stats}")
+    
+    student_activity = cached_data['student_activity'] if isinstance(cached_data['student_activity'], list) else []
+    logger.debug(f"Student activity loaded: {len(student_activity)} items")
+    
+    overdue_analysis = cached_data['overdue_analysis']
+    logger.debug(f"Overdue analysis loaded: {overdue_analysis}")
+    
+    overdue_books = cached_data['overdue_books']
+    logger.debug(f"Overdue books loaded: {overdue_books}")
+except Exception as e:
+    logger.error(f"Error processing cached data: {str(e)}", exc_info=True)
+    st.error("Failed to process dashboard data. Please try refreshing the page.")
+    st.stop()
 
 # KPI Metrics
 st.markdown('<h2 class="section-header">📊 Key Performance Indicators</h2>', unsafe_allow_html=True)
@@ -192,13 +276,41 @@ col1, col2 = st.columns(2)
 
 with col1:
     try:
+        # 确保日期时间对象有时区信息
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+            
+        # 验证日期范围
+        if start_date > end_date:
+            st.error("Start date cannot be later than end date")
+            st.stop()
+            
+        # 确保日期不是未来时间
+        now = datetime.now(timezone.utc)
+        if start_date > now or end_date > now:
+            st.error("Cannot query future dates")
+            st.stop()
+            
+        # 获取趋势数据
         borrowing_trends = APIClient.get_borrowing_trends(start_date, end_date)
-        st.plotly_chart(create_borrowing_trend_chart(borrowing_trends), use_container_width=True)
+        logger.debug(f"Borrowing trends data: {borrowing_trends}")
+        
+        if borrowing_trends:
+            st.plotly_chart(create_borrowing_trend_chart(borrowing_trends), use_container_width=True)
+        else:
+            st.warning("No borrowing trends data available for the selected period")
     except Exception as e:
+        logger.error(f"Failed to load borrowing trends: {str(e)}", exc_info=True)
         st.error(f"Failed to load borrowing trends: {str(e)}")
 
 with col2:
-    st.plotly_chart(create_category_pie_chart(category_stats), use_container_width=True)
+    try:
+        st.plotly_chart(create_category_pie_chart(category_stats), use_container_width=True)
+    except Exception as e:
+        logger.error(f"Failed to load category stats: {str(e)}", exc_info=True)
+        st.error("Failed to load category statistics")
 
 # Popular Books and Student Activity
 st.markdown('<h2 class="section-header">🔥 Popular Rankings</h2>', unsafe_allow_html=True)
@@ -222,8 +334,31 @@ with col1:
 with col2:
     try:
         utilization_data = APIClient.get_library_utilization(start_date, end_date)
-        st.plotly_chart(create_utilization_chart(utilization_data), use_container_width=True)
+        logger.debug(f"Utilization data: {utilization_data}")
+        
+        if utilization_data is None or utilization_data.empty:
+            st.warning("No utilization data available for the selected period")
+        else:
+            # 检查数据格式
+            if isinstance(utilization_data, dict):
+                # 如果是字典格式，转换为 DataFrame
+                daily_data = []
+                for date, count in utilization_data.get("daily_utilization", {}).items():
+                    daily_data.append({
+                        "date": date,
+                        "utilization_rate": count
+                    })
+                utilization_data = pd.DataFrame(daily_data)
+            
+            # 验证数据格式
+            required_columns = ["date", "utilization_rate"]
+            if all(col in utilization_data.columns for col in required_columns):
+                st.plotly_chart(create_utilization_chart(utilization_data), use_container_width=True)
+            else:
+                st.error("Invalid utilization data format")
+                logger.error(f"Missing required columns in utilization data: {utilization_data.columns}")
     except Exception as e:
+        logger.error(f"Failed to load utilization data: {str(e)}", exc_info=True)
         st.error(f"Failed to load utilization data: {str(e)}")
 
 # Detailed Tables

@@ -6,10 +6,11 @@ from sqlalchemy import func, or_
 import logging
 from app.db.session import get_db
 from app.crud.book import book_crud
+from app.models.book import Book
 from app.schemas.book import (
-    BookCreate, 
-    BookResponse, 
-    BookDetail, 
+    BookCreate,
+    BookResponse,
+    BookDetail,
     BookUpdate,
     BookAvailabilityResponse
 )
@@ -47,11 +48,11 @@ def get_books(
     except Exception as e:
         error_message = f"Error retrieving books: {str(e)}"
         logging.error(error_message, exc_info=True)
-        
+
         # Return detailed error in development environment
         import traceback
         error_details = traceback.format_exc()
-        
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -69,29 +70,25 @@ def create_book(
 ):
     # Create book record
     new_book = book_crud.create(db=db, obj_in=book_in)
-    
+
     # If initial copy count is specified, create the corresponding number of copies
     if book_in.initial_copies > 0:
         from app.crud import book_copy as book_copy_crud
         from app.schemas.book_copy import BookCopyCreate
-        
+
         for i in range(book_in.initial_copies):
-            # Generate call number for each copy
-            call_number = f"{new_book.category.code if hasattr(new_book, 'category') else 'GEN'}-{new_book.book_id}-{i+1}"
-            
             # Create copy
             book_copy_crud.create(
                 db=db,
                 obj_in=BookCopyCreate(
                     book_id=new_book.book_id,
-                    call_number=call_number,
                     acquisition_type="purchased",
                     acquisition_date=datetime.now().date(),
                     status="available",
                     condition="new"
                 )
             )
-    
+
     return new_book
 # done
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -102,7 +99,7 @@ def delete_book(
 ):
     """
     Delete a book (only if it has no copies).
-    
+
     - **book_id**: Book ID
     """
     db_book = book_crud.get_with_details(db, book_id=book_id)
@@ -111,14 +108,14 @@ def delete_book(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Book not found"
         )
-    
+
     # Check if there are any copies
     if db_book.copies and len(db_book.copies) > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete a book with copies. Please delete all copies first."
         )
-    
+
     book_crud.remove(db=db, id=book_id)
     return None
 # done
@@ -130,10 +127,30 @@ def get_book_by_isbn(
 ):
     """
     Get a book by ISBN.
-    
+
     - **isbn**: ISBN number
     """
     db_book = book_crud.get_by_isbn(db, isbn=isbn)
+    if not db_book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found"
+        )
+    # Make sure we get a fully populated BookDetail object
+    return book_crud.get_with_details(db, book_id=db_book.book_id)
+
+@router.get("/search/call-number/{call_number}", response_model=BookDetail)
+def get_book_by_call_number(
+    *,
+    db: Session = Depends(get_db),
+    call_number: str,
+):
+    """
+    Get a book by call number.
+
+    - **call_number**: Call number
+    """
+    db_book = book_crud.get_by_call_number(db, call_number=call_number)
     if not db_book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -153,7 +170,7 @@ def search_books_by_title(
     """
     Search books by title.
     Supports exact match or fuzzy search.
-    
+
     - **title**: Book title
     - **exact_match**: Whether to match exactly
     - **limit**: Maximum number of records to return
@@ -172,7 +189,7 @@ def search_books_by_author(
 ):
     """
     Search books by author name.
-    
+
     - **author_name**: Author name
     - **limit**: Maximum number of records to return
     """
@@ -187,7 +204,7 @@ def search_books_by_publisher(
 ):
     """
     Search books by publisher name.
-    
+
     - **publisher_name**: Publisher name
     - **limit**: Maximum number of records to return
     """
@@ -202,7 +219,7 @@ def search_books_by_category(
 ):
     """
     Search books by category name.
-    
+
     - **category_name**: Category name
     - **limit**: Maximum number of records to return
     """
@@ -217,7 +234,7 @@ def partial_update_book(
 ):
     """
     Partially update a book's information.
-    
+
     - **book_id**: Book ID
     - **book_in**: Updated book data (only include fields that need to be updated)
     """
@@ -227,10 +244,10 @@ def partial_update_book(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Book not found"
         )
-    
+
     # Filter out None values to only update provided fields
-    update_data = {k: v for k, v in book_in.dict(exclude_unset=True).items() if v is not None}
-    
+    update_data = {k: v for k, v in book_in.model_dump(exclude_unset=True).items() if v is not None}
+
     updated_book = book_crud.update(db=db, db_obj=db_book, obj_in=update_data)
     return updated_book
 

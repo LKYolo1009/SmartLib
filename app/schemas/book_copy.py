@@ -25,7 +25,6 @@ class AcquisitionType(str, Enum):
 
 class BookCopyBase(BaseModel):
     book_id: int
-    call_number: str
     acquisition_type: str
     acquisition_date: date = Field(default_factory=date.today)
     price: Optional[float] = None
@@ -38,7 +37,6 @@ class BookCopyCreate(BookCopyBase):
 
 class BookCopyUpdate(BaseModel):
     book_id: Optional[int] = None
-    call_number: Optional[str] = None
     acquisition_type: Optional[str] = None
     acquisition_date: Optional[date] = None
     price: Optional[float] = None
@@ -53,7 +51,7 @@ class BookCopyResponse(BookCopyBase):
     created_at: datetime
     updated_at: datetime
     book_title: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 

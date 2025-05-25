@@ -1,7 +1,7 @@
 import secrets
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, PostgresDsn, field_validator, ValidationInfo
+from pydantic import AnyHttpUrl, field_validator, ValidationInfo, computed_field
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -21,24 +21,13 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "123456"
     POSTGRES_DB: str = "MyLibrary2"
-    SQLALCHEMY_DATABASE_URI: Optional[str] = "postgresql://testuser:000000@localhost/MyLibrary2"
-
-    @field_validator("SQLALCHEMY_DATABASE_URI", mode='before')
-    def assemble_db_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
-        if isinstance(v, str):
-            return v
-        
-        user = info.data.get("POSTGRES_USER")
-        password = info.data.get("POSTGRES_PASSWORD")
-        server = info.data.get("POSTGRES_SERVER")
-        db = info.data.get("POSTGRES_DB", "")
-        
-        return f"postgresql://{user}:{password}@{server}/{db}"
+    
+    # 直接定义连接字符串，避免任何复杂处理
+    SQLALCHEMY_DATABASE_URI: str = "postgresql://postgres:123456@localhost/MyLibrary2"
 
     class Config:
         case_sensitive = True
         env_file = ".env"
         env_file_encoding = "utf-8"
-
 
 settings = Settings()

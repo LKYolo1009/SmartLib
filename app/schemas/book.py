@@ -14,12 +14,13 @@ class BookBase(BaseModel):
     """Book's Basic Information"""
     title: str = Field(..., description="Title", example="Dream of the Red Chamber")
     isbn: Optional[str] = Field(None, description="ISBN", example="9787020002207")
+    call_number: str = Field(..., description="Call Number", example="LIT-123-1")
     author_id: int = Field(..., description="Author ID", example=1)
     publisher_id: Optional[int] = Field(None, description="Publisher ID", example=1)
     publication_year: Optional[int] = Field(None, description="Publication Year", example=1982)
     language_code: Optional[str] = Field(None, description="Language Code", example="EN")
     category_id: int = Field(..., description="Category ID", example=1)
-    
+
     @field_validator('publication_year')
     def validate_publication_year(cls, v):
         """Validate publication year within a reasonable range"""
@@ -28,7 +29,7 @@ class BookBase(BaseModel):
             if v < 1000 or v > current_year:
                 raise ValueError(f'Publication year must be between 1000 and {current_year}')
         return v
-    
+
     @field_validator('isbn')
     def validate_isbn(cls, v):
         """Validation of ISBN format"""
@@ -47,19 +48,20 @@ class BookBase(BaseModel):
 class BookCreate(BookBase):
     """Model used when creating a book"""
     initial_copies: Optional[int] = Field(0, description="Number of initial copies to create", example=1)
-    
+
     @field_validator('initial_copies')
     def validate_initial_copies(cls, v):
         """Validate the number of initial copies is non-negative"""
         if v < 0:
             raise ValueError('Number of initial copies must be non-negative')
         return v
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "title": "Dream of the Red Chamber",
                 "isbn": "9787020002207",
+                "call_number": "LIT-123",
                 "author_id": 1,
                 "publisher_id": 1,
                 "publication_year": 1982,
@@ -79,12 +81,13 @@ class BookUpdate(BookBase):
     publication_year: Optional[int] = Field(None, description="Publication Year", example=1982)
     language_code: Optional[str] = Field(None, description="Language Code", example="EN")
     category_id: Optional[int] = Field(None, description="Category ID", example=1)
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "title": "Dream of the Red Chamber",
                 "isbn": "9787020002207",
+                "call_number": "LIT-123",
                 "author_id": 1,
                 "publisher_id": 1,
                 "publication_year": 1982,
@@ -99,7 +102,7 @@ class BookResponse(BookBase):
     book_id: int
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes  = True
         json_schema_extra = {
@@ -107,6 +110,7 @@ class BookResponse(BookBase):
                 "book_id": 1,
                 "title": "Dream of the Red Chamber",
                 "isbn": "9787020002207",
+                "call_number": "LIT-123",
                 "author_id": 1,
                 "publisher_id": 1,
                 "publication_year": 1982,
@@ -125,7 +129,7 @@ class BookDetail(BookResponse):
     category_name: str
     available_copies: int
     total_copies: int
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -133,6 +137,7 @@ class BookDetail(BookResponse):
                 "book_id": 1,
                 "title": "Dream of the Red Chamber",
                 "isbn": "9787020002207",
+                "call_number": "LIT-123",
                 "author_id": 1,
                 "author_name": "Cao Xueqin",
                 "publisher_id": 1,
@@ -162,7 +167,7 @@ class BookSearchParams(BaseModel):
     use_or: bool = Field(False, description="Use OR logic between filters instead of AND")
     sort_by: Optional[str] = Field(None, description="Field to sort results by")
     sort_desc: bool = Field(False, description="Sort in descending order if True")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -181,7 +186,7 @@ class BookBatchStatusUpdate(BaseModel):
     book_ids: List[int] = Field(..., description="List of book IDs to update")
     status: str = Field(..., description="New status for the books")
     notes: Optional[str] = Field(None, description="Optional notes about the status change")
-    
+
     @field_validator('status')
     def validate_status(cls, v):
         """Validate book status"""
@@ -189,7 +194,7 @@ class BookBatchStatusUpdate(BaseModel):
         if v not in valid_statuses:
             raise ValueError(f'Status must be one of: {", ".join(valid_statuses)}')
         return v
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -208,7 +213,7 @@ class BookAvailabilityResponse(BaseModel):
     total_copies: int
     available_copies: int
     is_available: bool
-    
+
     class Config:
         json_schema_extra = {
             "example": {

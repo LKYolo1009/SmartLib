@@ -94,13 +94,13 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
     # Convert to DataFrame if needed
     if isinstance(data, list):
         if not data:
-            return create_empty_chart("暂无借阅趋势数据<br><br>请检查数据源连接或稍后重试")
+            return create_empty_chart("No borrowing trend data available<br><br>Please check data source connection or try again later")
         df = pd.DataFrame(data)
     else:
         df = data
     
     if df.empty or 'date' not in df.columns:
-        return create_empty_chart("借阅趋势数据格式错误<br><br>缺少必要的日期字段")
+        return create_empty_chart("Invalid borrowing trend data format<br><br>Missing required date field")
     
     # Convert date column to datetime if needed
     if df['date'].dtype == 'object':
@@ -114,7 +114,7 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
         fig.add_trace(go.Scatter(
             x=df['date'],
             y=df['borrowings'],
-            name='📚 借出图书',
+            name='📚 Books Borrowed',
             line=dict(
                 color=CHART_CONFIG['colors']['primary'],
                 width=3,
@@ -122,9 +122,9 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
             ),
             mode='lines+markers',
             marker=dict(size=6, symbol='circle'),
-            hovertemplate='<b>📚 借出图书</b><br>' +
-                         '日期: %{x|%Y-%m-%d}<br>' +
-                         '数量: %{y} 本<br>' +
+            hovertemplate='<b>📚 Books Borrowed</b><br>' +
+                         'Date: %{x|%Y-%m-%d}<br>' +
+                         'Count: %{y} books<br>' +
                          '<extra></extra>',
             showlegend=True
         ))
@@ -134,7 +134,7 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
         fig.add_trace(go.Scatter(
             x=df['date'],
             y=df['returns'],
-            name='📖 归还图书',
+            name='📖 Books Returned',
             line=dict(
                 color=CHART_CONFIG['colors']['secondary'],
                 width=3,
@@ -142,9 +142,9 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
             ),
             mode='lines+markers',
             marker=dict(size=6, symbol='diamond'),
-            hovertemplate='<b>📖 归还图书</b><br>' +
-                         '日期: %{x|%Y-%m-%d}<br>' +
-                         '数量: %{y} 本<br>' +
+            hovertemplate='<b>📖 Books Returned</b><br>' +
+                         'Date: %{x|%Y-%m-%d}<br>' +
+                         'Count: %{y} books<br>' +
                          '<extra></extra>',
             showlegend=True
         ))
@@ -157,18 +157,18 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
         fig.add_trace(go.Scatter(
             x=df['date'],
             y=trend_line,
-            name='📈 借阅趋势',
+            name='📈 Borrowing Trend',
             line=dict(color='rgba(255,0,0,0.5)', width=2, dash='dot'),
-            hovertemplate='<b>📈 趋势线</b><br>' +
-                         '日期: %{x|%Y-%m-%d}<br>' +
-                         '趋势值: %{y:.1f}<br>' +
+            hovertemplate='<b>📈 Trend Line</b><br>' +
+                         'Date: %{x|%Y-%m-%d}<br>' +
+                         'Trend Value: %{y:.1f}<br>' +
                          '<extra></extra>',
             showlegend=True
         ))
     
     fig.update_layout(
         title=dict(
-            text="📊 图书借阅趋势分析",
+            text="📊 Book Borrowing Trend Analysis",
             font=dict(size=18, color="#2c3e50"),
             x=0.5,
             xanchor='center'
@@ -176,13 +176,13 @@ def create_borrowing_trend_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Fi
         template=CHART_CONFIG["template"],
         height=CHART_CONFIG["height"],
         xaxis=dict(
-            title="日期",
+            title="Date",
             title_font=dict(size=14),
             showgrid=True,
             gridcolor='rgba(128,128,128,0.2)'
         ),
         yaxis=dict(
-            title="图书数量",
+            title="Number of Books",
             title_font=dict(size=14),
             showgrid=True,
             gridcolor='rgba(128,128,128,0.2)'
@@ -209,13 +209,13 @@ def create_category_pie_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figur
     # Convert to DataFrame if needed
     if isinstance(data, list):
         if not data:
-            return create_empty_chart("暂无分类数据<br><br>请检查图书分类信息是否已正确配置", height=400)
+            return create_empty_chart("No category data available<br><br>Please check if book categories are properly configured", height=400)
         df = pd.DataFrame(data)
     else:
         df = data
     
     if df.empty:
-        return create_empty_chart("暂无分类数据<br><br>请检查图书分类信息是否已正确配置", height=400)
+        return create_empty_chart("No category data available<br><br>Please check if book categories are properly configured", height=400)
     
     print(f"Category data received: {df.head()}")  # Debug info
     print(f"Columns: {df.columns.tolist()}")  # Debug info
@@ -241,20 +241,20 @@ def create_category_pie_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figur
     if value_field is None or category_field is None:
         missing_fields = []
         if value_field is None:
-            missing_fields.append("数量字段")
+            missing_fields.append("Count field")
         if category_field is None:
-            missing_fields.append("分类字段")
+            missing_fields.append("Category field")
         
         return create_empty_chart(
-            f"分类数据格式错误<br><br>缺少: {', '.join(missing_fields)}<br>" +
-            f"当前字段: {', '.join(df.columns.tolist())}", 
+            f"Invalid category data format<br><br>Missing: {', '.join(missing_fields)}<br>" +
+            f"Current fields: {', '.join(df.columns.tolist())}", 
             height=400
         )
     
     # Check if all values are zero
     if df[value_field].sum() == 0:
         return create_empty_chart(
-            "所有分类图书数量为 0<br><br>请检查图书数据是否正确录入",
+            "All category book counts are 0<br><br>Please check if book data is correctly entered",
             height=400
         )
     
@@ -263,7 +263,7 @@ def create_category_pie_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figur
     
     if df_filtered.empty:
         return create_empty_chart(
-            "所有分类图书数量为 0<br><br>请检查图书数据是否正确录入",
+            "All category book counts are 0<br><br>Please check if book data is correctly entered",
             height=400
         )
     
@@ -272,7 +272,7 @@ def create_category_pie_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figur
         df_filtered,
         values=value_field,
         names=category_field,
-        title="📚 图书分类分布",
+        title="📚 Book Category Distribution",
         template=CHART_CONFIG["template"],
         color_discrete_sequence=px.colors.qualitative.Set3,
         hover_data=[value_field]
@@ -283,8 +283,8 @@ def create_category_pie_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figur
         textposition='inside',
         textinfo='percent+label',
         hovertemplate='<b>%{label}</b><br>' +
-                     '数量: %{value} 本<br>' +
-                     '占比: %{percent}<br>' +
+                     'Count: %{value} books<br>' +
+                     'Percentage: %{percent}<br>' +
                      '<extra></extra>',
         textfont_size=12,
         marker=dict(line=dict(color='#FFFFFF', width=2))
@@ -318,13 +318,13 @@ def create_popular_books_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figu
     # Convert to DataFrame if needed
     if isinstance(data, list):
         if not data:
-            return create_empty_chart("暂无热门图书数据")
+            return create_empty_chart("No popular books data available")
         df = pd.DataFrame(data)
     else:
         df = data
     
     if df.empty or 'title' not in df.columns or 'borrow_count' not in df.columns:
-        return create_empty_chart("热门图书数据格式错误<br><br>缺少标题或借阅次数字段")
+        return create_empty_chart("Invalid popular books data format<br><br>Missing title or borrow count field")
     
     # Limit to top 10 and sort by borrow_count
     df_sorted = df.nlargest(10, 'borrow_count')
@@ -334,7 +334,7 @@ def create_popular_books_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figu
         x="borrow_count",
         y="title",
         orientation='h',  # Horizontal bar chart for better title readability
-        title="🔥 热门图书排行榜",
+        title="🔥 Popular Books Ranking",
         template=CHART_CONFIG["template"],
         color="borrow_count",
         color_continuous_scale="viridis"
@@ -347,8 +347,8 @@ def create_popular_books_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figu
             x=0.5,
             xanchor='center'
         ),
-        xaxis_title="借阅次数",
-        yaxis_title="图书标题",
+        xaxis_title="Borrow Count",
+        yaxis_title="Book Title",
         showlegend=False,
         margin=dict(l=150, r=60, t=80, b=60)
     )
@@ -356,7 +356,7 @@ def create_popular_books_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figu
     # Update traces for better tooltips
     fig.update_traces(
         hovertemplate='<b>%{y}</b><br>' +
-                     '借阅次数: %{x} 次<br>' +
+                     'Borrow Count: %{x} times<br>' +
                      '<extra></extra>'
     )
     
@@ -367,13 +367,13 @@ def create_student_activity_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
     # Convert to DataFrame if needed
     if isinstance(data, list):
         if not data:
-            return create_empty_chart("暂无学生活动数据")
+            return create_empty_chart("No student activity data available")
         df = pd.DataFrame(data)
     else:
         df = data
     
     if df.empty or 'student_name' not in df.columns or 'borrow_count' not in df.columns:
-        return create_empty_chart("学生活动数据格式错误")
+        return create_empty_chart("Invalid student activity data format")
     
     # Limit to top 10 and sort by borrow_count
     df_sorted = df.nlargest(10, 'borrow_count')
@@ -383,7 +383,7 @@ def create_student_activity_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
         x="borrow_count",
         y="student_name",
         orientation='h',  # Horizontal for better name readability
-        title="👨‍🎓 活跃学生排行榜",
+        title="👨‍🎓 Active Students Ranking",
         template=CHART_CONFIG["template"],
         color="borrow_count",
         color_continuous_scale="plasma"
@@ -396,8 +396,8 @@ def create_student_activity_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
             x=0.5,
             xanchor='center'
         ),
-        xaxis_title="借阅次数",
-        yaxis_title="学生姓名",
+        xaxis_title="Borrow Count",
+        yaxis_title="Student Name",
         showlegend=False,
         margin=dict(l=100, r=60, t=80, b=60)
     )
@@ -405,7 +405,7 @@ def create_student_activity_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
     # Update traces for better tooltips
     fig.update_traces(
         hovertemplate='<b>%{y}</b><br>' +
-                     '借阅次数: %{x} 次<br>' +
+                     'Borrow Count: %{x} times<br>' +
                      '<extra></extra>'
     )
     
@@ -471,13 +471,13 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure
     # Convert to DataFrame if needed
     if isinstance(data, list):
         if not data:
-            return create_empty_chart("暂无利用率数据")
+            return create_empty_chart("No utilization data available")
         df = pd.DataFrame(data)
     else:
         df = data
     
     if df.empty or 'date' not in df.columns or 'utilization_rate' not in df.columns:
-        return create_empty_chart("利用率数据格式错误")
+        return create_empty_chart("Invalid utilization data format")
     
     # Convert date column to datetime if it's not already
     if df['date'].dtype == 'object':
@@ -487,7 +487,7 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure
         df,
         x="date",
         y="utilization_rate",
-        title="📊 图书馆利用率趋势",
+        title="📊 Library Utilization Trend",
         template=CHART_CONFIG["template"],
         line_shape="spline"  # Smooth line
     )
@@ -498,7 +498,7 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure
         y=avg_utilization,
         line_dash="dash",
         line_color="red",
-        annotation_text=f"平均利用率: {avg_utilization:.1f}%",
+        annotation_text=f"Average Utilization: {avg_utilization:.1f}%",
         annotation_position="top right"
     )
     
@@ -509,8 +509,8 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure
             x=0.5,
             xanchor='center'
         ),
-        xaxis_title="日期",
-        yaxis_title="利用率 (%)",
+        xaxis_title="Date",
+        yaxis_title="Utilization Rate (%)",
         showlegend=False,
         margin=dict(l=60, r=60, t=80, b=60)
     )
