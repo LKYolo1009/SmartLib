@@ -91,14 +91,6 @@ def get_popular_books(
                 detail="Date range cannot exceed one year"
             )
         
-        # Ensure dates are not in the future
-        now = datetime.now(timezone.utc)
-        if start_date > now or end_date > now:
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot query future dates"
-            )
-        
         result = crud_stats.get_popular_books(db, limit, start_date, end_date)
         if not result:
             return []

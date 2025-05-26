@@ -429,7 +429,7 @@ def create_overdue_analysis_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
     if df.empty or 'days_overdue' not in df.columns:
         return create_empty_chart("Overdue data format error")
 
-    # 强制转换为数值型，无法转换的设为NaN
+    # 强制转换 不然一直又格式问题
     df['days_overdue'] = pd.to_numeric(df['days_overdue'], errors='coerce')
     df = df.dropna(subset=['days_overdue'])
 
@@ -473,10 +473,10 @@ def create_overdue_analysis_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
 
 def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.Figure:
     """Create library utilization time series chart"""
-    # 处理字典格式的输入
+    # Handle dictionary format input
     if isinstance(data, dict):
         if 'daily_utilization' in data:
-            # 转换 daily_utilization 字典为 DataFrame
+            # Convert daily_utilization dictionary to DataFrame
             daily_data = []
             for date, count in data['daily_utilization'].items():
                 daily_data.append({
@@ -486,12 +486,12 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.
             df = pd.DataFrame(daily_data)
         else:
             return create_empty_chart("Invalid utilization data format: missing daily_utilization")
-    # 处理列表格式的输入
+    # Handle list format input
     elif isinstance(data, list):
         if not data:
             return create_empty_chart("No utilization data available")
         df = pd.DataFrame(data)
-    # 处理 DataFrame 格式的输入
+    # Handle DataFrame format input
     elif isinstance(data, pd.DataFrame):
         df = data
     else:
@@ -500,11 +500,11 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.
     if df.empty or 'date' not in df.columns or 'utilization_rate' not in df.columns:
         return create_empty_chart("Invalid utilization data format: missing required columns")
     
-    # 转换日期列为 datetime
+    # Convert date column to datetime
     if df['date'].dtype == 'object':
         df['date'] = pd.to_datetime(df['date'])
     
-    # 创建图表
+    # Create chart
     fig = px.line(
         df,
         x="date",
@@ -514,7 +514,7 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.
         line_shape="spline"
     )
     
-    # 添加平均值线
+    # Add average line
     avg_utilization = df['utilization_rate'].mean()
     fig.add_hline(
         y=avg_utilization,
@@ -524,17 +524,17 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.
         annotation_position="top right",
         annotation_font=dict(
             size=12,
-            color="#2c3e50"  # 使用固定颜色替代不存在的键
+            color="#2c3e50" 
         )
     )
     
-    # 更新布局
+    # Update layout
     fig.update_layout(
         height=CHART_CONFIG["height"],
         title=dict(
             font=dict(
                 size=18,
-                color="#2c3e50"  # 使用固定颜色替代不存在的键
+                color="#2c3e50"  
             ),
             x=0.5,
             xanchor='center'
@@ -543,11 +543,11 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.
         yaxis_title="Utilization Rate (%)",
         showlegend=False,
         margin=dict(l=60, r=60, t=80, b=60),
-        paper_bgcolor="rgba(0,0,0,0)",  # 使用透明背景
-        plot_bgcolor="rgba(0,0,0,0)"   # 使用透明背景
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)" 
     )
     
-    # 更新轨迹
+    # Update traces
     fig.update_traces(
         line=dict(
             color=CHART_CONFIG['colors']['primary'],

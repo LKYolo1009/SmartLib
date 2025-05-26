@@ -6,7 +6,7 @@ import sys
 import os
 import logging
 
-# 配置日志
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -92,7 +92,7 @@ def get_cached_data():
         kpi_data = APIClient.get_kpi_metrics()
         logger.debug(f"KPI data: {kpi_data}")
         
-        # 根据日期范围选择时间区间
+        # Select time range based on date range
         if date_range == "Last 7 Days":
             end_date = datetime.now()
             start_date = end_date - timedelta(days=7)
@@ -207,7 +207,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>📚 Library Management Dashboard</h1>
-    <p>Smart Library Operations Analytics Platform</p>
+    <p>Tembusu Library Operations Analytics Platform</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -276,24 +276,23 @@ col1, col2 = st.columns(2)
 
 with col1:
     try:
-        # 确保日期时间对象有时区信息
+        # Ensure date time objects have timezone information
         if start_date.tzinfo is None:
             start_date = start_date.replace(tzinfo=timezone.utc)
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
-            
-        # 验证日期范围
+        
         if start_date > end_date:
             st.error("Start date cannot be later than end date")
             st.stop()
             
-        # 确保日期不是未来时间
-        now = datetime.now(timezone.utc)
-        if start_date > now or end_date > now:
+        # ensure the date time is not the future 
+        today = datetime.now(timezone.utc).date()
+        if start_date.date() > today or end_date.date() > today:
             st.error("Cannot query future dates")
             st.stop()
             
-        # 获取趋势数据
+        # get the trend 
         borrowing_trends = APIClient.get_borrowing_trends(start_date, end_date)
         logger.debug(f"Borrowing trends data: {borrowing_trends}")
         
