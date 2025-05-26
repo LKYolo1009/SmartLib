@@ -47,27 +47,13 @@ After starting the service, you can access the API documentation at:
 - ReDoc: http://localhost:8000/redoc
 
 
-## Project Structure
 
-```
-app/
-├── api/          # API routes
-├── core/         # Core configurations
-├── crud/         # Database operations
-├── db/           # Database configurations
-├── models/       # Data models
-├── schemas/      # Pydantic models
-└── service/      # Business logic
-admin_dashboard/  # Streamlit frontend dashboard
-assets/           # Project images, dashboard screenshots, etc.
-```
 
 ## Dashboard Screenshots
 
 The Streamlit dashboard looks like this:
 
-![Dashboard Example 1](assets/dashboard1.png)
-![Dashboard Example 2](assets/dashboard2.png)
+![Dashboard Example 1](assets/dashboard2.png)
+![Dashboard Example 2](assets/dashboard1.png)
 
-> Please place images in the `assets/` folder, and they can be directly referenced in the README.
 
