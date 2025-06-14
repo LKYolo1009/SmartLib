@@ -137,7 +137,6 @@ CREATE TABLE students (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     telegram_id VARCHAR(50) UNIQUE,
     CONSTRAINT valid_matric CHECK (matric_number ~ '^A[0-9]{7}[A-Za-z]$')
-    -- Removed email constraint to simplify setup
 );
 CREATE INDEX idx_student_status ON students(status);
 
@@ -322,7 +321,7 @@ INSERT INTO students (matric_number, full_name, email, status, telegram_id) VALU
     ('A7788990S', 'Noah Anderson', 'noah.a@u.nus.edu', 'active', '778899001'),
     ('A8899001T', 'Ava Martinez', 'ava.m@u.nus.edu', 'active', '889900112'),
     ('A9900112U', 'Lucas Wang', 'lucas.w@u.nus.edu', 'active', '990011223'),
-    ('A0011223V', 'Charlotte Singh', 'charlotte.s@u.nus.edu', 'active', '001122334');
+    ('A0011223V', 'Ruofan Xu', 'ruofan.x@u.nus.edu', 'active', '6640904968');
 
 -- Insert books
 INSERT INTO books (isbn, title, call_number, author_id, publisher_id, publication_year, language_code, category_id) VALUES

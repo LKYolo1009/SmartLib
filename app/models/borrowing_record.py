@@ -46,8 +46,8 @@ class BorrowingRecord(Base):
     def validate_matric_number(self, key, matric_number):
         if not matric_number:
             raise ValueError("Matriculation number is required")
-        if not matric_number.startswith('A') or len(matric_number) != 10 or not matric_number[1:9].isdigit() or not matric_number[9].isalpha():
-            raise ValueError("Invalid matriculation number format. Must be A followed by 8 digits and 1 letter (e.g., A12345678B)")
+        if not matric_number.startswith('A') or len(matric_number) != 9 or not matric_number[1:8].isdigit() or not matric_number[8].isalpha():
+            raise ValueError("Invalid matriculation number format. Must be A followed by 7 digits and 1 letter (e.g., A1234567B)")
         return matric_number
 
     @validates('due_date')

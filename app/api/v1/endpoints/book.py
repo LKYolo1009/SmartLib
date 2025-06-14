@@ -19,7 +19,7 @@ from fastapi import Path
 router = APIRouter()
 
 #Done
-@router.get("/", response_model=List[BookResponse])
+@router.get("/", response_model=List[BookDetail])
 def get_books(
     limit: Optional[int] = Query(20, gt=0, description="Maximum number of books to return"),
     title: Optional[str] = Query(None, description="Filter by book title"),
@@ -31,6 +31,7 @@ def get_books(
 ):
     """
     Retrieve books with optional filters.
+    Returns detailed book information including author name, publisher name, etc.
     """
     try:
         books = book_crud.search_books(
@@ -43,8 +44,16 @@ def get_books(
             limit=limit,
             exact_match=False
         )
+        
+        # Get detailed information for each book
+        detailed_books = []
+        for book in books:
+            detailed_book = book_crud.get_with_details(db, book_id=book.book_id)
+            if detailed_book:
+                detailed_books.append(detailed_book)
+        
         logging.info("Books retrieved successfully")
-        return books
+        return detailed_books
     except Exception as e:
         error_message = f"Error retrieving books: {str(e)}"
         logging.error(error_message, exc_info=True)
@@ -159,7 +168,7 @@ def get_book_by_call_number(
     # Make sure we get a fully populated BookDetail object
     return book_crud.get_with_details(db, book_id=db_book.book_id)
 #done
-@router.get("/search/title/{title}", response_model=List[BookResponse])
+@router.get("/search/title/{title}", response_model=List[BookDetail])
 def search_books_by_title(
     *,
     db: Session = Depends(get_db),
@@ -170,15 +179,26 @@ def search_books_by_title(
     """
     Search books by title.
     Supports exact match or fuzzy search.
+    Returns detailed book information including author, publisher, and category details.
 
     - **title**: Book title
     - **exact_match**: Whether to match exactly
     - **limit**: Maximum number of records to return
     """
+    # Get basic book information
     if exact_match:
-        return book_crud.search_by_exact_title(db, title=title, limit=limit)
+        books = book_crud.search_by_exact_title(db, title=title, limit=limit)
     else:
-        return book_crud.search_by_title(db, title=title, limit=limit)
+        books = book_crud.search_by_title(db, title=title, limit=limit)
+    
+    # Get detailed information for each book
+    detailed_books = []
+    for book in books:
+        detailed_book = book_crud.get_with_details(db, book_id=book.book_id)
+        if detailed_book:
+            detailed_books.append(detailed_book)
+    
+    return detailed_books
 #done
 @router.get("/search/author/{author_name}", response_model=List[BookResponse])
 def search_books_by_author(

@@ -1,0 +1,3 @@
+"""
+SmartLib package
+""" 

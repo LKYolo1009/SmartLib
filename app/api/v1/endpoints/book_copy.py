@@ -172,20 +172,20 @@ def delete_book_copy(
 """
 Endpoint for getting a book copy by QR code is temporarily disabled.
 """
-# @router.get("/qr-code/{qr_code}", response_model=BookCopyResponse)
-# def get_book_copy_by_qr_code(
-#     *,
-#     db: Session = Depends(get_db),
-#     qr_code: str = Path(..., title="Book QR code"),
-# ):
+@router.get("/qr-code/{qr_code}", response_model=BookCopyResponse)
+def get_book_copy_by_qr_code(
+    *,
+    db: Session = Depends(get_db),
+    qr_code: str = Path(..., title="Book QR code"),
+):
 
-#     db_copy = book_copy_crud.get_by_qr_code(db, qr_code=qr_code)
-#     if not db_copy:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Book copy not found"
-#         )
-#     return db_copy
+    db_copy = book_copy_crud.get_by_qr_code(db, qr_code=qr_code)
+    if not db_copy:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book copy not found"
+        )
+    return db_copy
 
 
 # done

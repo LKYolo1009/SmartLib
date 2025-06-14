@@ -2,6 +2,7 @@ from typing import List, Optional, Union, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from sqlalchemy import or_
+from urllib.parse import unquote
 
 from ..models.student import Student
 from ..schemas.student import StudentCreate, StudentUpdate
@@ -36,13 +37,26 @@ class CRUDStudent(CRUDBase[Student, StudentCreate, StudentUpdate]):
         """
         return db.query(Student).filter(Student.email == email).first()
     
-    def get_student(self, db: Session, *, identifier: str) -> Optional[Student]:
+    def get_by_telegram_id(self, db: Session, telegram_id: str) -> Optional[Student]:
         """
-        Get student by matric number or email
+        Get student by telegram ID
         
         Args:
             db: Database session
-            identifier: Matric number or email
+            telegram_id: Telegram ID
+            
+        Returns:
+            Student object if found, None otherwise
+        """
+        return db.query(Student).filter(Student.telegram_id == telegram_id).first()
+    
+    def get_student(self, db: Session, *, identifier: str) -> Optional[Student]:
+        """
+        Get student by matric number, email, or telegram ID
+        
+        Args:
+            db: Database session
+            identifier: Matric number, email, or telegram ID
             
         Returns:
             Student object if found, None otherwise
@@ -53,7 +67,12 @@ class CRUDStudent(CRUDBase[Student, StudentCreate, StudentUpdate]):
             return student
         
         # Then try by email
-        return self.get_by_email(db, email=identifier)
+        student = self.get_by_email(db, email=identifier)
+        if student:
+            return student
+        
+        # Finally try by telegram ID
+        return self.get_by_telegram_id(db, telegram_id=identifier)
     
     def get_multi(
         self, db: Session, *, skip: int = 0, limit: int = 100
@@ -200,27 +219,86 @@ class CRUDStudent(CRUDBase[Student, StudentCreate, StudentUpdate]):
         return student
     
     def search(
-        self, db: Session, *, query: str, skip: int = 0, limit: int = 100
+        self,
+        db: Session,
+        *,
+        query: Optional[str] = None,
+        name: Optional[str] = None,
+        matric_number: Optional[str] = None,
+        email: Optional[str] = None,
+        telegram_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+        sort_by: Optional[str] = None,
+        exact_match: bool = False
     ) -> List[Student]:
         """
-        Search students by name, matric number, or email
+        搜索学生
         
         Args:
-            db: Database session
-            query: Search query
-            skip: Number of records to skip
-            limit: Maximum number of records to return
+            db: 数据库会话
+            query: 通用搜索词
+            name: 学生姓名
+            matric_number: 学号
+            email: 邮箱
+            telegram_id: Telegram ID
+            limit: 返回结果的最大数量
+            offset: 跳过的结果数量
+            sort_by: 排序字段
+            exact_match: 是否精确匹配
             
         Returns:
-            List of matching students
+            学生列表
         """
-        return db.query(Student).filter(
-            or_(
-                Student.full_name.ilike(f"%{query}%"),
-                Student.matric_number.ilike(f"%{query}%"),
-                Student.email.ilike(f"%{query}%")
+        # 构建基础查询
+        db_query = db.query(Student)
+        
+        # 如果提供了通用搜索词
+        if query:
+            search_term = f"%{query}%" if not exact_match else query
+            db_query = db_query.filter(
+                or_(
+                    Student.full_name.ilike(search_term),
+                    Student.matric_number.ilike(search_term),
+                    Student.email.ilike(search_term),
+                    Student.telegram_id.ilike(search_term)
+                )
             )
-        ).offset(skip).limit(limit).all()
+        else:
+            # 使用特定字段搜索
+            if name:
+                search_term = f"%{name}%" if not exact_match else name
+                db_query = db_query.filter(Student.full_name.ilike(search_term))
+            
+            if matric_number:
+                search_term = f"%{matric_number}%" if not exact_match else matric_number
+                db_query = db_query.filter(Student.matric_number.ilike(search_term))
+            
+            if email:
+                search_term = f"%{email}%" if not exact_match else email
+                db_query = db_query.filter(Student.email.ilike(search_term))
+            
+            if telegram_id:
+                search_term = f"%{telegram_id}%" if not exact_match else telegram_id
+                db_query = db_query.filter(Student.telegram_id.ilike(search_term))
+        
+        # 添加排序
+        if sort_by:
+            if sort_by == "name":
+                db_query = db_query.order_by(Student.full_name)
+            elif sort_by == "matric_number":
+                db_query = db_query.order_by(Student.matric_number)
+            elif sort_by == "email":
+                db_query = db_query.order_by(Student.email)
+            elif sort_by == "created_at":
+                db_query = db_query.order_by(Student.created_at)
+            elif sort_by == "updated_at":
+                db_query = db_query.order_by(Student.updated_at)
+        
+        # 添加分页
+        db_query = db_query.offset(offset).limit(limit)
+        
+        return db_query.all()
     
     def get_active_students(
         self, db: Session, *, skip: int = 0, limit: int = 100

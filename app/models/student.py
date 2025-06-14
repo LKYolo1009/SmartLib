@@ -3,17 +3,18 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .base import Base
 from .enums import student_status
+from datetime import datetime
 
 class Student(Base):
     __tablename__ = 'students'
 
-    matric_number = Column(String(20), primary_key=True)
-    full_name = Column(String(255), nullable=False)
-    email = Column(String(255), nullable=False, unique=True)
-    status = Column(student_status, server_default='active')
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    telegram_id = Column(String(50), nullable=True, unique=True)
+    matric_number = Column(String(20), primary_key=True, index=True)
+    full_name = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    status = Column(String(20), default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    telegram_id = Column(String(100), unique=True, index=True, nullable=True)
     borrowing_records = relationship("BorrowingRecord", back_populates="student")
 
     @property

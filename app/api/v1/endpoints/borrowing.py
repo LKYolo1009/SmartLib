@@ -72,59 +72,47 @@ def extend_borrowing(
     return borrowing_crud.extend_due_date(db=db, borrow_id=borrow_id, days=days)
 
 
-@router.get("/student/{matric_number}", response_model=List[BorrowDetail])
+@router.get("/student/{identifier}", response_model=List[BorrowDetail])
 def get_student_borrowings(
-    matric_number: str,
+    identifier: str,
     active_only: bool = Query(False, description="Only return current borrowings"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
 ):
-    """Get borrowing records for a specific student"""
-    records = borrowing_crud.get_by_matric_number(
+    """
+    Get borrowing records for a student by matric number or telegram ID
+    
+    Args:
+        identifier: Student's matric number or telegram ID
+        active_only: If True, only return current borrowings
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+    """
+    return borrowing_crud.get_by_student_identifier(
         db, 
-        matric_number=matric_number,
-        active_only=active_only
+        identifier=identifier,
+        active_only=active_only,
+        skip=skip,
+        limit=limit
     )
-    
-    # Limit the records after retrieving
-    records = records[skip:skip+limit]
-    
-    detailed_records = []
-    for record in records:
-        detailed_record = borrowing_crud.get_with_details(db, borrow_id=record.borrow_id)
-        if detailed_record:
-            detailed_records.append(detailed_record)
-    
-    return detailed_records
 
 
-@router.get("/student/{matric_number}/history", response_model=List[BorrowDetail])
+@router.get("/student/{identifier}/history", response_model=List[BorrowDetail])
 def get_student_borrowing_history(
-    matric_number: str,
+    identifier: str,
     db: Session = Depends(get_db),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of records to return"),
     include_active: bool = Query(True, description="Include current borrowings")
 ):
     """Get full borrowing history for a student"""
-    records = borrowing_crud.get_by_matric_number(
+    return borrowing_crud.get_by_student_identifier(
         db, 
-        matric_number=matric_number,
-        active_only=not include_active
+        identifier=identifier,
+        active_only=not include_active,
+        limit=limit
     )
-    
-    # Limit the number of records
-    records = records[:limit]
-    
-    detailed_records = []
-    for record in records:
-        detailed_record = borrowing_crud.get_with_details(db, borrow_id=record.borrow_id)
-        if detailed_record:
-            detailed_records.append(detailed_record)
-    
-    return detailed_records
 
-#done
 @router.get("/overdue", response_model=List[BorrowDetail])
 def get_overdue_borrowings(
     days_overdue: Optional[int] = Query(None, description="Overdue days threshold"),
@@ -138,20 +126,12 @@ def get_overdue_borrowings(
     if days_overdue is not None:
         due_date_threshold = now - timedelta(days=days_overdue)
     
-    records = borrowing_crud.get_overdue(
+    return borrowing_crud.get_overdue(
         db,
         skip=skip,
         limit=limit,
         due_date_threshold=due_date_threshold
     )
-    
-    detailed_records = []
-    for record in records:
-        detailed_record = borrowing_crud.get_with_details(db, borrow_id=record.borrow_id)
-        if detailed_record:
-            detailed_records.append(detailed_record)
-    
-    return detailed_records
 
 
 @router.get("/due-soon", response_model=List[BorrowDetail])
@@ -161,15 +141,7 @@ def get_due_soon_borrowings(
     db: Session = Depends(get_db),
 ):
     """Get borrowing records due soon (for reminder)"""
-    records = borrowing_crud.get_due_soon(db, days=days, limit=limit)
-    
-    detailed_records = []
-    for record in records:
-        detailed_record = borrowing_crud.get_with_details(db, borrow_id=record.borrow_id)
-        if detailed_record:
-            detailed_records.append(detailed_record)
-    
-    return detailed_records
+    return borrowing_crud.get_due_soon(db, days=days, limit=limit)
 
 
 @router.get("/book/{book_id}", response_model=List[BorrowDetail])
@@ -180,15 +152,7 @@ def get_book_borrowing_history(
     db: Session = Depends(get_db),
 ):
     """Get borrowing history for a specific book"""
-    records = borrowing_crud.get_by_book(db, book_id=book_id, skip=skip, limit=limit)
-    
-    detailed_records = []
-    for record in records:
-        detailed_record = borrowing_crud.get_with_details(db, borrow_id=record.borrow_id)
-        if detailed_record:
-            detailed_records.append(detailed_record)
-    
-    return detailed_records
+    return borrowing_crud.get_by_book(db, book_id=book_id, skip=skip, limit=limit)
 
 # done
 @router.get("/popular", response_model=List[Dict])
@@ -234,34 +198,86 @@ def get_active_borrowings(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     overdue_only: bool = Query(False, description="Only show overdue borrowings"),
-    matric_number: Optional[str] = Query(None, description="Filter by student matriculation number")
 ):
     """
     Get current active borrowings with filtering options and statistical data
     """
+    # Get active borrowings with details
     active_borrowings = borrowing_crud.get_active_borrowings(
         db,
         skip=skip,
         limit=limit,
-        overdue_only=overdue_only,
-        matric_number=matric_number
+        overdue_only=overdue_only
     )
     
+    # Get total count
     total_count = borrowing_crud.count_active_borrowings(
         db,
-        overdue_only=overdue_only,
-        matric_number=matric_number
+        overdue_only=overdue_only
     )
     
-    # Calculate statistical data
+    # Calculate overdue count
     now = datetime.now(timezone.utc)
     overdue_count = sum(1 for b in active_borrowings if b.due_date < now)
     
+    # Return formatted response
     return {
         "total_count": total_count,
         "returned_count": total_count - len(active_borrowings),
         "overdue_count": overdue_count,
-        "borrowings": active_borrowings
+        "borrowings": active_borrowings  # 直接返回 active_borrowings，因为它应该已经是正确的格式
     }
+
+@router.get("/student/{identifier}/due-soon", response_model=List[BorrowDetail])
+def get_student_due_soon_borrowings(
+    identifier: str,
+    days: int = Query(3, ge=1, le=7, description="Days threshold for due soon"),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+):
+    """
+    Get borrowing records due soon for a student by matric number or telegram ID
+    
+    Args:
+        identifier: Student's matric number or telegram ID
+        days: Days threshold for due soon
+        limit: Maximum number of records to return
+    """
+    return borrowing_crud.get_due_soon_by_student_identifier(
+        db, 
+        identifier=identifier,
+        days=days,
+        limit=limit
+    )
+
+@router.get("/student/{identifier}/overdue", response_model=List[BorrowDetail])
+def get_student_overdue_borrowings(
+    identifier: str,
+    days_overdue: Optional[int] = Query(None, description="Overdue days threshold"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+):
+    """
+    Get overdue borrowing records for a student by matric number or telegram ID
+    
+    Args:
+        identifier: Student's matric number or telegram ID
+        days_overdue: Overdue days threshold
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+    """
+    now = datetime.now(timezone.utc)
+    due_date_threshold = None
+    if days_overdue is not None:
+        due_date_threshold = now - timedelta(days=days_overdue)
+    
+    return borrowing_crud.get_overdue_by_student_identifier(
+        db,
+        identifier=identifier,
+        skip=skip,
+        limit=limit,
+        due_date_threshold=due_date_threshold
+    )
 
 

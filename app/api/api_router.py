@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import book, book_copy, borrowing, student, metadata, search, health, statistics
+from app.api.v1.endpoints import book, book_copy, borrowing, student, metadata, health, statistics
 import logging
 
 api_router = APIRouter()

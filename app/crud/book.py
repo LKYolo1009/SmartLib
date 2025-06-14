@@ -11,6 +11,9 @@ from ..models.language import Language
 from ..schemas.book import BookCreate, BookUpdate
 from .base import CRUDBase
 from app.schemas.borrowing import BorrowResponse, BorrowDetail
+from ..models.student import Student
+from ..models.book_copy import BookCopy
+from ..models.borrowing_record import BorrowingRecord
 
 class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
     """Book CRUD operations class"""
@@ -72,7 +75,13 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         Search books by title (partial match)
         """
         search_query = f"%{title}%"
-        return db.query(Book).filter(
+        return db.query(Book).options(
+            joinedload(Book.author),
+            joinedload(Book.publisher),
+            joinedload(Book.language),
+            joinedload(Book.category),
+            joinedload(Book.copies)
+        ).filter(
             Book.title.ilike(search_query)
         ).limit(limit).all()
 
@@ -80,7 +89,13 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         """
         Search books by exact title
         """
-        return db.query(Book).filter(
+        return db.query(Book).options(
+            joinedload(Book.author),
+            joinedload(Book.publisher),
+            joinedload(Book.language),
+            joinedload(Book.category),
+            joinedload(Book.copies)
+        ).filter(
             func.lower(Book.title) == func.lower(title)
         ).limit(limit).all()
 
@@ -89,7 +104,13 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         Search books by author name
         """
         search_query = f"%{author_name}%"
-        return db.query(Book).join(Book.author).filter(
+        return db.query(Book).options(
+            joinedload(Book.author),
+            joinedload(Book.publisher),
+            joinedload(Book.language),
+            joinedload(Book.category),
+            joinedload(Book.copies)
+        ).join(Book.author).filter(
             Author.author_name.ilike(search_query)
         ).limit(limit).all()
 
@@ -98,7 +119,13 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         Search books by publisher name
         """
         search_query = f"%{publisher_name}%"
-        return db.query(Book).join(Book.publisher).filter(
+        return db.query(Book).options(
+            joinedload(Book.author),
+            joinedload(Book.publisher),
+            joinedload(Book.language),
+            joinedload(Book.category),
+            joinedload(Book.copies)
+        ).join(Book.publisher).filter(
             Publisher.publisher_name.ilike(search_query)
         ).limit(limit).all()
 
@@ -107,8 +134,14 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         Search books by category name
         """
         search_query = f"%{category_name}%"
-        return db.query(Book).join(Book.category).filter(
-            Category.name.ilike(search_query)
+        return db.query(Book).options(
+            joinedload(Book.author),
+            joinedload(Book.publisher),
+            joinedload(Book.language),
+            joinedload(Book.category),
+            joinedload(Book.copies)
+        ).join(Book.category).filter(
+            Category.category_name.ilike(search_query)
         ).limit(limit).all()
 
     def search_by_names(
@@ -242,50 +275,122 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         self,
         db: Session,
         *,
+        query: Optional[str] = None,
         title: Optional[str] = None,
         author_name: Optional[str] = None,
         publisher_name: Optional[str] = None,
         category_name: Optional[str] = None,
+        isbn: Optional[str] = None,
+        publication_year: Optional[int] = None,
         language_name: Optional[str] = None,
-        limit: int = 20,
+        status: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+        sort_by: Optional[str] = None,
         exact_match: bool = False
     ) -> List[Book]:
         """
-        Search books with multiple criteria
+        Search books
+        
+        Args:
+            db: Database session
+            query: General search term
+            title: Book title
+            author_name: Author name
+            publisher_name: Publisher name
+            category_name: Category name
+            isbn: ISBN
+            publication_year: Publication year
+            language_name: Language
+            status: Status
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            sort_by: Sort field
+            exact_match: Whether to match exactly
+            
+        Returns:
+            List of books
         """
-        query = db.query(Book)
-
-        # Join tables as needed
-        if author_name:
-            query = query.join(Book.author)
-        if publisher_name:
-            query = query.join(Book.publisher, isouter=True)
-        if category_name:
-            query = query.join(Book.category)
-        if language_name:
-            query = query.join(Book.language, isouter=True)
-
-        # Build filters
-        filters = []
-        if title:
-            if exact_match:
-                filters.append(func.lower(Book.title) == func.lower(title))
-            else:
-                filters.append(Book.title.ilike(f"%{title}%"))
-        if author_name:
-            filters.append(Author.author_name.ilike(f"%{author_name}%"))
-        if publisher_name:
-            filters.append(Publisher.publisher_name.ilike(f"%{publisher_name}%"))
-        if category_name:
-            filters.append(Category.name.ilike(f"%{category_name}%"))
-        if language_name:
-            filters.append(Language.name.ilike(f"%{language_name}%"))
-
-        # Apply filters if any
-        if filters:
-            query = query.filter(or_(*filters))
-
-        return query.limit(limit).all()
+        # Build base query
+        db_query = db.query(Book)
+        
+        # If a general search term is provided
+        if query:
+            search_term = f"%{query}%" if not exact_match else query
+            db_query = db_query.join(
+                Author, Book.author_id == Author.author_id
+            ).join(
+                Publisher, Book.publisher_id == Publisher.publisher_id
+            ).join(
+                Category, Book.category_id == Category.category_id
+            ).join(
+                Language, Book.language_id == Language.language_id
+            ).filter(
+                or_(
+                    Book.title.ilike(search_term),
+                    Book.isbn.ilike(search_term),
+                    Author.name.ilike(search_term),
+                    Publisher.name.ilike(search_term),
+                    Category.name.ilike(search_term),
+                    Language.name.ilike(search_term)
+                )
+            )
+        else:
+            # Use specific fields for search
+            if title:
+                search_term = f"%{title}%" if not exact_match else title
+                db_query = db_query.filter(Book.title.ilike(search_term))
+                
+            if author_name:
+                search_term = f"%{author_name}%" if not exact_match else author_name
+                db_query = db_query.join(Author).filter(Author.name.ilike(search_term))
+                
+            if publisher_name:
+                search_term = f"%{publisher_name}%" if not exact_match else publisher_name
+                db_query = db_query.join(Publisher).filter(Publisher.name.ilike(search_term))
+                
+            if category_name:
+                search_term = f"%{category_name}%" if not exact_match else category_name
+                db_query = db_query.join(Category).filter(Category.name.ilike(search_term))
+                
+            if isbn:
+                search_term = f"%{isbn}%" if not exact_match else isbn
+                db_query = db_query.filter(Book.isbn.ilike(search_term))
+                
+            if publication_year:
+                db_query = db_query.filter(Book.publication_year == publication_year)
+                
+            if language_name:
+                search_term = f"%{language_name}%" if not exact_match else language_name
+                db_query = db_query.join(Language).filter(Language.name.ilike(search_term))
+                
+            if status:
+                if status == "available":
+                    db_query = db_query.filter(Book.available_copies > 0)
+                elif status == "unavailable":
+                    db_query = db_query.filter(Book.available_copies == 0)
+        
+        # Add sorting
+        if sort_by:
+            if sort_by == "title":
+                db_query = db_query.order_by(Book.title)
+            elif sort_by == "author":
+                db_query = db_query.join(Author).order_by(Author.name)
+            elif sort_by == "publisher":
+                db_query = db_query.join(Publisher).order_by(Publisher.name)
+            elif sort_by == "category":
+                db_query = db_query.join(Category).order_by(Category.name)
+            elif sort_by == "publication_year":
+                db_query = db_query.order_by(Book.publication_year)
+            elif sort_by == "created_at":
+                db_query = db_query.order_by(Book.created_at)
+            elif sort_by == "updated_at":
+                db_query = db_query.order_by(Book.updated_at)
+        
+        # Add pagination
+        db_query = db_query.offset(offset).limit(limit)
+        
+        return db_query.all()
 
     def general_search(
         self,

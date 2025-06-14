@@ -17,7 +17,7 @@ app/schemas/__pycache__/
 app/service/__pycache__/
 
 # Python compiled files
-*.cpython-313.pyc
+*.cpython-*.pyc
 
 # Virtual Environment
 venv/

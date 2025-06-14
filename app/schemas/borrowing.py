@@ -63,6 +63,7 @@ class BorrowDetail(BorrowResponse):
     call_number: Optional[str] = None
     student_name: Optional[str] = None
     student_email: Optional[str] = None
+    student_telegram_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -81,7 +82,8 @@ class BorrowDetail(BorrowResponse):
                 "book_title": "Dream of the Red Chamber",
                 "call_number": "LIT-123-1",
                 "student_name": "John Smith",
-                "student_email": "john.smith@university.edu"
+                "student_email": "john.smith@university.edu",
+                "student_telegram_id": "123456789"
             }
         }
 
