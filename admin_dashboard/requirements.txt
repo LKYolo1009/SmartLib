@@ -6,3 +6,10 @@ python-dotenv>=1.0.0
 pytz>=2024.1
 numpy==1.26.4
 altair==5.2.0 
+
+
+Pillow==11.2.1
+qrcode==8.2
+reportlab==4.4.0
+SQLAlchemy==2.0.41
+psycopg2-binary

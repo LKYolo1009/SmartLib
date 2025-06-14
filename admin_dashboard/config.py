@@ -2,10 +2,11 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+# load_dotenv()
+# Don't use load_dotenv in Docker unless you need a local .env for dev
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8000")
 
 # API Endpoints
 ENDPOINTS = {
@@ -17,7 +18,9 @@ ENDPOINTS = {
     "overdue": f"{API_BASE_URL}/api/v1/statistics/overdue",
     "library_utilization": f"{API_BASE_URL}/api/v1/statistics/library-utilization",
     "category_trends": f"{API_BASE_URL}/api/v1/statistics/category-trends",
-    "daily": f"{API_BASE_URL}/api/v1/statistics/daily"
+    "daily": f"{API_BASE_URL}/api/v1/statistics/daily",
+    "copies": f"{API_BASE_URL}/api/v1/book_copies/?limit=9999",
+    "books": f"{API_BASE_URL}/api/v1/book/?limit=9999",
 }
 
 # 🎨 现代化配色方案 - 基于 Tailwind CSS 色彩系统

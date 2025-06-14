@@ -300,6 +300,49 @@ class APIClient:
         """Convert API response to DataFrame"""
         return pd.DataFrame(data)
 
+    @staticmethod
+    def get_book_copy_labels():
+        """Fetch book copy data and enrich with book metadata"""
+        try:
+            copies_url = ENDPOINTS["copies"]
+            books_url = ENDPOINTS["books"]
+
+            # Fetch data
+            copies_response = requests.get(copies_url)
+            books_response = requests.get(books_url)
+            copies_response.raise_for_status()
+            books_response.raise_for_status()
+
+            copies = copies_response.json()
+            books = books_response.json()
+
+            # Build book_id → metadata map
+            book_map = {
+                b["book_id"]: {
+                    "isbn": b.get("isbn", ""),
+                    "call_number": b.get("call_number", "")
+                }
+                for b in books
+            }
+
+            # Enrich copies with title, call number, and ISBN
+            result = []
+            for c in copies:
+                book_meta = book_map.get(c["book_id"], {"isbn": "", "call_number": ""})
+                result.append({
+                    "qr_code": c["qr_code"],
+                    "title": c["book_title"],
+                    "call_number": book_meta["call_number"],
+                    "isbn": book_meta["isbn"]
+                })
+
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_book_copy_labels: {e}", exc_info=True)
+            st.error("❌ Failed to fetch book label data from API.")
+            return []
+
+
 # Standalone functions for backward compatibility
 def get_daily_stats(days: int = 90) -> pd.DataFrame:
     """Get daily statistics"""
