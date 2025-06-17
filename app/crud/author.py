@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 
 from ..models.author import Author
 from .base import CRUDBase
+from ..schemas.author import AuthorCreate
 
 class CRUDAuthor(CRUDBase[Author, str, str]):
     """Author CRUD operation class"""
@@ -17,15 +18,15 @@ class CRUDAuthor(CRUDBase[Author, str, str]):
     def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[Author]:
         return db.query(Author).offset(skip).limit(limit).all()
     
-    def create(self, db: Session, *, author_name: str) -> Author:
-        existing_author = self.get_by_name(db, author_name=author_name)
+    def create(self, db: Session, *, obj_in: AuthorCreate) -> Author:
+        existing_author = self.get_by_name(db, author_name=obj_in.author_name)
         if existing_author:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Author name already exists"
             )
         
-        db_obj = Author(author_name=author_name)
+        db_obj = Author(author_name=obj_in.author_name)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)

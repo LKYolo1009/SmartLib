@@ -132,3 +132,5 @@ cython_debug/
 /test/
 poetry.lock
 app.log 
+
+.pyc

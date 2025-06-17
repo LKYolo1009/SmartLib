@@ -82,20 +82,13 @@ def get_student_borrowings(
 ):
     """
     Get borrowing records for a student by matric number or telegram ID
-    
-    Args:
-        identifier: Student's matric number or telegram ID
-        active_only: If True, only return current borrowings
-        skip: Number of records to skip
-        limit: Maximum number of records to return
     """
-    return borrowing_crud.get_by_student_identifier(
+    records = borrowing_crud.get_by_student_identifier(
         db, 
         identifier=identifier,
-        active_only=active_only,
-        skip=skip,
-        limit=limit
+        active_only=active_only
     )
+    return records[skip:skip+limit]
 
 
 @router.get("/student/{identifier}/history", response_model=List[BorrowDetail])
@@ -106,12 +99,12 @@ def get_student_borrowing_history(
     include_active: bool = Query(True, description="Include current borrowings")
 ):
     """Get full borrowing history for a student"""
-    return borrowing_crud.get_by_student_identifier(
+    records = borrowing_crud.get_by_student_identifier(
         db, 
         identifier=identifier,
-        active_only=not include_active,
-        limit=limit
+        active_only=not include_active
     )
+    return records[:limit]
 
 @router.get("/overdue", response_model=List[BorrowDetail])
 def get_overdue_borrowings(
@@ -165,22 +158,6 @@ def get_popular_books(
     return borrowing_crud.get_popular_books(db, days=days, limit=limit)
 
 
-@router.get("/stats", response_model=BorrowingStats)
-def get_borrowing_stats(
-    db: Session = Depends(get_db),
-    days: int = Query(30, ge=1, le=365, description="Days range for statistics"),
-    category_id: Optional[int] = None
-):
-    """Get borrowing statistics"""
-    end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=days)
-    
-    return borrowing_crud.get_borrowing_stats(
-        db,
-        start_date=start_date,
-        end_date=end_date,
-        category_id=category_id
-    )
 
 
 # @router.get("/student-stats/{matric_number}", response_model=Dict[str, Any])
