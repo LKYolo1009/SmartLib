@@ -11,5 +11,4 @@ api_router.include_router(student.router, prefix="/api/v1/student", tags=["Stude
 api_router.include_router(metadata.router, prefix="/api/v1/metadata", tags=["Metadata"])
 api_router.include_router(statistics.router, prefix="/api/v1/statistics", tags=["Statistics"])
 api_router.include_router(health.router, prefix="/api/v1/health", tags=["Health"])
-
 logging.basicConfig(level=logging.INFO)

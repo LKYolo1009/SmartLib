@@ -30,6 +30,7 @@ class BookCopyBase(BaseModel):
     price: Optional[float] = None
     condition: str = "good"
     status: str = "available"
+    location: Optional[str] = None  # 添加位置信息字段
     notes: Optional[str] = None
 
 class BookCopyCreate(BookCopyBase):
@@ -42,6 +43,7 @@ class BookCopyUpdate(BaseModel):
     price: Optional[float] = None
     condition: Optional[str] = None
     status: Optional[str] = None
+    location: Optional[str] = None  # 添加位置信息字段
     notes: Optional[str] = None
 
 class BookCopyResponse(BookCopyBase):
@@ -65,6 +67,7 @@ class BookCopyResponse(BookCopyBase):
 class BookCopyStatusUpdate(BaseModel):
     status: str
     condition: Optional[str] = None
+    location: Optional[str] = None  # 添加位置信息字段
     notes: Optional[str] = None
 
 class BookBorrowStatusResponse(BaseModel):

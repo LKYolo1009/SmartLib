@@ -17,6 +17,7 @@ class BookCopy(Base):
     price = Column(Numeric(10,2))
     condition = Column(book_condition, server_default='good')
     status = Column(book_status, server_default='available')
+    location = Column(Text, nullable=True)  # 添加位置信息字段
     notes = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

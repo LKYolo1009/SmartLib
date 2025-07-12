@@ -169,6 +169,7 @@ CREATE TABLE book_copies (
     price NUMERIC(10,2),
     condition book_condition DEFAULT 'good',
     status book_status DEFAULT 'available',
+    location TEXT,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -378,60 +379,39 @@ INSERT INTO books (isbn, title, call_number, author_id, publisher_id, publicatio
     ('9781617292392', 'Grokking Algorithms', '001_BHA', 17, 13, 2016, 'eng', 2);
 
 -- Insert book copies
-INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, condition, status) VALUES
-    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available'),
-    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available'),
-    (2, 'purchased', '2019-11-20', 12.50, 'good', 'available'),
-    (3, 'donated', '2018-05-12', NULL, 'fair', 'available'),
-    (4, 'purchased', '2020-06-30', 14.95, 'good', 'available'),
-    (5, 'purchased', '2019-08-18', 16.99, 'good', 'borrowed'),
-    (6, 'donated', '2017-12-05', NULL, 'fair', 'available'),
-    (7, 'purchased', '2021-02-28', 19.99, 'new', 'available'),
-    (8, 'donated', '2018-03-17', NULL, 'poor', 'missing'),  -- 修正：'maintenance' → 'missing'
-    (9, 'purchased', '2020-09-12', 13.50, 'good', 'available'),
-    (10, 'purchased', '2019-07-23', 22.99, 'good', 'available'),
-    (11, 'purchased', '2021-01-09', 24.99, 'new', 'available'),
-    (12, 'donated', '2016-11-30', NULL, 'fair', 'available'),
-    (13, 'purchased', '2020-05-15', 18.75, 'good', 'borrowed'),
-    (14, 'purchased', '2021-03-11', 20.50, 'new', 'available'),
-    (15, 'purchased', '2019-10-25', 17.99, 'good', 'available'),
-    (16, 'purchased', '2021-02-05', 65.99, 'good', 'available'),
-    (17, 'purchased', '2022-01-15', 89.99, 'new', 'borrowed'),
-    (18, 'donated', '2020-06-17', NULL, 'good', 'available'),
-    (19, 'purchased', '2021-09-30', 72.50, 'good', 'available'),
-    (20, 'purchased', '2022-05-12', 59.99, 'new', 'available'),
-    (21, 'purchased', '2022-01-15', 29.99, 'new', 'available'),
-    (21, 'purchased', '2022-01-15', 29.99, 'new', 'borrowed'),
-    (22, 'purchased', '2021-06-20', 24.99, 'good', 'available'),
-    (23, 'purchased', '2020-11-10', 27.50, 'good', 'available'),
-    (24, 'purchased', '2021-03-05', 32.99, 'new', 'borrowed'),
-    (25, 'purchased', '2022-02-28', 26.99, 'new', 'available'),
-    (26, 'purchased', '2022-03-15', 28.99, 'new', 'borrowed'),
-    (27, 'purchased', '2021-09-20', 25.99, 'good', 'available'),
-    (28, 'purchased', '2020-12-10', 23.99, 'good', 'available'),
-    (29, 'purchased', '2022-04-05', 27.99, 'new', 'borrowed'),
-    (30, 'purchased', '2021-11-15', 26.99, 'good', 'available'),
-    -- Additional 20 book copies
-    (31, 'purchased', '2021-05-10', 14.99, 'good', 'available'),
-    (32, 'purchased', '2021-06-15', 18.99, 'good', 'available'),
-    (33, 'purchased', '2021-07-20', 16.99, 'good', 'available'),
-    (34, 'donated', '2021-08-25', NULL, 'fair', 'available'),
-    (35, 'purchased', '2021-09-30', 15.99, 'good', 'available'),
-    (36, 'purchased', '2021-10-05', 22.99, 'good', 'available'),
-    (37, 'purchased', '2021-11-10', 24.99, 'good', 'available'),
-    (38, 'donated', '2021-12-15', NULL, 'fair', 'available'),
-    (39, 'purchased', '2022-01-20', 17.99, 'new', 'available'),
-    (40, 'purchased', '2022-02-25', 19.99, 'new', 'available'),
-    (41, 'purchased', '2022-03-02', 45.99, 'new', 'available'),
-    (42, 'purchased', '2022-03-07', 49.99, 'new', 'available'),
-    (43, 'purchased', '2022-03-12', 39.99, 'new', 'available'),
-    (44, 'purchased', '2022-03-17', 42.99, 'new', 'available'),
-    (45, 'purchased', '2022-03-22', 44.99, 'new', 'available'),
-    (46, 'purchased', '2022-03-27', 38.99, 'new', 'available'),
-    (47, 'purchased', '2022-04-01', 36.99, 'new', 'available'),
-    (48, 'purchased', '2022-04-06', 35.99, 'new', 'available'),
-    (49, 'purchased', '2022-04-11', 37.99, 'new', 'available'),
-    (50, 'purchased', '2022-04-16', 39.99, 'new', 'available');
+INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, condition, status, location) VALUES
+    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available', 'Section A Shelf Level 1'),
+    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available', 'Section A Shelf Level 2'),
+    (2, 'purchased', '2019-11-20', 12.50, 'good', 'available', 'Section B Shelf Level 1'),
+    (3, 'donated', '2018-05-12', NULL, 'fair', 'available', 'Section C Shelf Level 3'),
+    (4, 'purchased', '2020-06-30', 14.95, 'good', 'available', 'Section A Shelf Level 1'),
+    (5, 'purchased', '2019-08-18', 16.99, 'good', 'borrowed', 'Section B Shelf Level 2'),
+    (6, 'donated', '2017-12-05', NULL, 'fair', 'available', 'Section C Shelf Level 1'),
+    (7, 'purchased', '2021-02-28', 19.99, 'new', 'available', 'Section A Shelf Level 3'),
+    (8, 'donated', '2018-03-17', NULL, 'poor', 'missing', 'Section D Shelf Level 1'),
+    (9, 'purchased', '2020-09-12', 13.50, 'good', 'available', 'Section B Shelf Level 3'),
+    (10, 'purchased', '2019-07-23', 22.99, 'good', 'available', 'Section A Shelf Level 2'),
+    (11, 'purchased', '2021-01-09', 24.99, 'new', 'available', 'Section C Shelf Level 2'),
+    (12, 'donated', '2016-11-30', NULL, 'fair', 'available', 'Section D Shelf Level 2'),
+    (13, 'purchased', '2020-05-15', 18.75, 'good', 'borrowed', 'Section A Shelf Level 1'),
+    (14, 'purchased', '2021-03-11', 20.50, 'new', 'available', 'Section B Shelf Level 1'),
+    (15, 'purchased', '2019-10-25', 17.99, 'good', 'available', 'Section C Shelf Level 3'),
+    (16, 'purchased', '2021-02-05', 65.99, 'good', 'available', 'Computer Section Shelf Level 1'),
+    (17, 'purchased', '2022-01-15', 89.99, 'new', 'borrowed', 'Computer Section Shelf Level 2'),
+    (18, 'donated', '2020-06-17', NULL, 'good', 'available', 'Section D Shelf Level 3'),
+    (19, 'purchased', '2021-09-30', 72.50, 'good', 'available', 'Computer Section Shelf Level 1'),
+    (20, 'purchased', '2022-05-12', 59.99, 'new', 'available', 'Medical Section Shelf Level 1'),
+    (21, 'purchased', '2022-01-15', 29.99, 'new', 'available', 'Section A Shelf Level 2'),
+    (21, 'purchased', '2022-01-15', 29.99, 'new', 'borrowed', 'Section A Shelf Level 3'),
+    (22, 'purchased', '2021-06-20', 24.99, 'good', 'available', 'Section B Shelf Level 2'),
+    (23, 'purchased', '2020-11-10', 27.50, 'good', 'available', 'Section C Shelf Level 1'),
+    (24, 'purchased', '2021-03-05', 32.99, 'new', 'borrowed', 'Section D Shelf Level 1'),
+    (25, 'purchased', '2022-02-28', 26.99, 'new', 'available', 'Section A Shelf Level 3'),
+    (26, 'purchased', '2022-03-15', 28.99, 'new', 'borrowed', 'Section B Shelf Level 3'),
+    (27, 'purchased', '2021-09-20', 25.99, 'good', 'available', 'Section C Shelf Level 2'),
+    (28, 'purchased', '2020-12-10', 23.99, 'good', 'available', 'Section D Shelf Level 3'),
+    (29, 'purchased', '2022-04-05', 27.99, 'new', 'borrowed', 'Section A Shelf Level 1'),
+    (30, 'purchased', '2021-11-15', 26.99, 'good', 'available', 'Section B Shelf Level 1');
 
 -- Insert borrowing records
 INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, return_date, status) VALUES
@@ -469,58 +449,58 @@ INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, re
     (21, 'A5566778Q', '2025-04-19', '2025-05-03', '2025-05-02', 'returned'),
 
     -- Overdue and returned late
-    (31, 'A1234567B', '2025-04-01', '2025-04-15', '2025-04-20', 'returned'),
-    (32, 'A2345678C', '2025-04-05', '2025-04-19', '2025-04-25', 'returned'),
-    (33, 'A3456789D', '2025-04-10', '2025-04-24', '2025-05-05', 'returned'),
+    (10, 'A1234567B', '2025-04-01', '2025-04-15', '2025-04-20', 'returned'),
+    (11, 'A2345678C', '2025-04-05', '2025-04-19', '2025-04-25', 'returned'),
+    (12, 'A3456789D', '2025-04-10', '2025-04-24', '2025-05-05', 'returned'),
 
     -- Severely overdue (still borrowed)
-    (34, 'A4567890E', '2025-04-15', '2025-04-29', NULL, 'borrowed'),
-    (35, 'A5678901F', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
+    (13, 'A4567890E', '2025-04-15', '2025-04-29', NULL, 'borrowed'),
+    (14, 'A5678901F', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
 
     -- Extended and returned on time
-    (36, 'A6789012G', '2025-04-01', '2025-04-15', '2025-04-29', 'returned'),
-    (37, 'A7890123H', '2025-04-05', '2025-04-19', '2025-05-02', 'returned'),
+    (15, 'A6789012G', '2025-04-01', '2025-04-15', '2025-04-29', 'returned'),
+    (16, 'A7890123H', '2025-04-05', '2025-04-19', '2025-05-02', 'returned'),
 
     -- Extended and still borrowed (not overdue)
-    (38, 'A8901234J', '2025-04-15', '2025-04-29', NULL, 'borrowed'),
-    (39, 'A9012345K', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
+    (17, 'A8901234J', '2025-04-15', '2025-04-29', NULL, 'borrowed'),
+    (18, 'A9012345K', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
 
     -- Extended but overdue
-    (40, 'A0123456L', '2025-04-25', '2025-05-08', NULL, 'borrowed'),
+    (19, 'A0123456L', '2025-04-25', '2025-05-08', NULL, 'borrowed'),
 
     -- Additional regular borrowings
-    (41, 'A1122334M', '2025-04-01', '2025-04-15', '2025-04-14', 'returned'),
-    (42, 'A2233445N', '2025-04-05', '2025-04-19', '2025-04-18', 'returned'),
-    (43, 'A3344556O', '2025-04-10', '2025-04-24', '2025-04-23', 'returned'),
-    (44, 'A4455667P', '2025-04-15', '2025-04-29', '2025-04-28', 'returned'),
-    (45, 'A5566778Q', '2025-04-20', '2025-05-04', '2025-05-03', 'returned'),
+    (20, 'A1122334M', '2025-04-01', '2025-04-15', '2025-04-14', 'returned'),
+    (1, 'A2233445N', '2025-04-05', '2025-04-19', '2025-04-18', 'returned'),
+    (2, 'A3344556O', '2025-04-10', '2025-04-24', '2025-04-23', 'returned'),
+    (3, 'A4455667P', '2025-04-15', '2025-04-29', '2025-04-28', 'returned'),
+    (4, 'A5566778Q', '2025-04-20', '2025-05-04', '2025-05-03', 'returned'),
 
     -- Current borrowings
-    (46, 'A6677889R', '2025-05-01', '2025-05-15', NULL, 'borrowed'),
-    (47, 'A7788990S', '2025-05-02', '2025-05-16', NULL, 'borrowed'),
-    (48, 'A8899001T', '2025-05-03', '2025-05-17', NULL, 'borrowed'),
-    (49, 'A9900112U', '2025-05-04', '2025-05-18', NULL, 'borrowed'),
-    (50, 'A0011223V', '2025-05-05', '2025-05-19', NULL, 'borrowed');
+    (5, 'A6677889R', '2025-05-01', '2025-05-15', NULL, 'borrowed'),
+    (6, 'A7788990S', '2025-05-02', '2025-05-16', NULL, 'borrowed'),
+    (7, 'A8899001T', '2025-05-03', '2025-05-17', NULL, 'borrowed'),
+    (8, 'A9900112U', '2025-05-04', '2025-05-18', NULL, 'borrowed'),
+    (9, 'A0011223V', '2025-05-05', '2025-05-19', NULL, 'borrowed');
 
 -- Update the extension dates
 -- For returned books that were extended
-UPDATE borrowing_records SET extension_date = '2025-04-29' WHERE copy_id = 36 AND matric_number = 'A6789012G';
-UPDATE borrowing_records SET extension_date = '2025-05-02' WHERE copy_id = 37 AND matric_number = 'A7890123H';
+UPDATE borrowing_records SET extension_date = '2025-04-29' WHERE copy_id = 15 AND matric_number = 'A6789012G';
+UPDATE borrowing_records SET extension_date = '2025-05-02' WHERE copy_id = 16 AND matric_number = 'A7890123H';
 
 -- For books still borrowed with extension
-UPDATE borrowing_records SET extension_date = '2025-05-13' WHERE copy_id = 38 AND matric_number = 'A8901234J';
-UPDATE borrowing_records SET extension_date = '2025-05-18' WHERE copy_id = 39 AND matric_number = 'A9012345K';
+UPDATE borrowing_records SET extension_date = '2025-05-13' WHERE copy_id = 17 AND matric_number = 'A8901234J';
+UPDATE borrowing_records SET extension_date = '2025-05-18' WHERE copy_id = 18 AND matric_number = 'A9012345K';
 
 -- For overdue book with extension
-UPDATE borrowing_records SET extension_date = '2025-05-22' WHERE copy_id = 40 AND matric_number = 'A0123456L';
+UPDATE borrowing_records SET extension_date = '2025-05-22' WHERE copy_id = 19 AND matric_number = 'A0123456L';
 
 -- Update book copy status to match borrowing records
 UPDATE book_copies SET status = 'borrowed' WHERE copy_id IN (
     22, 24, 26, 29, 21,  -- Currently borrowed books (not overdue)
     23, 25, 27,          -- Overdue books (still borrowed)
-    34, 35,              -- Severely overdue (still borrowed)
-    38, 39, 40,          -- Extended books (still borrowed)
-    46, 47, 48, 49, 50   -- Current borrowings
+    13, 14,              -- Severely overdue (still borrowed)
+    17, 18, 19,          -- Extended books (still borrowed)
+    5, 6, 7, 8, 9        -- Current borrowings
 );
 -- Set search path to public schema
 SET search_path TO public;

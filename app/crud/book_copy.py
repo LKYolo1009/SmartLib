@@ -91,6 +91,7 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         book_title: Optional[str] = None,
         status: Optional[str] = None,
         condition: Optional[str] = None,
+        location: Optional[str] = None,  # 添加位置参数
         limit: int = 20
     ) -> List[BookCopy]:
         """
@@ -107,6 +108,8 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
             filters.append(BookCopy.status == status)
         if condition:
             filters.append(BookCopy.condition == condition)
+        if location:  # 添加位置过滤
+            filters.append(BookCopy.location.ilike(f"%{location}%"))
 
         if filters:
             query = query.filter(and_(*filters))
@@ -169,6 +172,10 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         # Update condition if provided
         if status_update.condition:
             update_data["condition"] = status_update.condition
+
+        # Update location if provided
+        if status_update.location:
+            update_data["location"] = status_update.location
 
         updated_copy = super().update(db, db_obj=db_obj, obj_in=update_data)
 
