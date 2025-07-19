@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.api import api_router
-from app.db.session import engine, SessionLocal
-from app.db.base import Base
+from app.api.api_router import api_router
+from app.db.session import engine, SessionLocal, Base
 from app.core.config import settings
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -50,10 +49,7 @@ app = FastAPI(
         {"name": "Borrowing", "description": "Operations with borrowing records"},
         {"name": "Metadata", "description": "Operations with metadata (authors, publishers, categories, languages)"},
         {"name": "Statistics", "description": "Statistical data and analytics"},
-        {"name": "Health", "description": "Health check endpoints"},
-        {"name": "NLU", "description": "Natural Language Understanding for conversational BI"},
-        {"name": "Query Generator", "description": "Convert NLU results to API queries and SQL"},
-        {"name": "Dialog Context", "description": "Redis-based dialog context management for multi-turn conversations"}
+        {"name": "Health", "description": "Health check endpoints"}
     ],
     swagger_ui_parameters={
         "defaultModelsExpandDepth": -1,  # Don't expand Models by default

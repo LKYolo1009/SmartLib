@@ -30,7 +30,7 @@ class BookCopyBase(BaseModel):
     price: Optional[float] = None
     condition: str = "good"
     status: str = "available"
-    location: Optional[str] = None  # 添加位置信息字段
+    location_id: Optional[int] = None  # 位置ID
     notes: Optional[str] = None
 
 class BookCopyCreate(BookCopyBase):
@@ -43,16 +43,17 @@ class BookCopyUpdate(BaseModel):
     price: Optional[float] = None
     condition: Optional[str] = None
     status: Optional[str] = None
-    location: Optional[str] = None  # 添加位置信息字段
+    location_id: Optional[int] = None  # 位置ID
     notes: Optional[str] = None
 
 class BookCopyResponse(BookCopyBase):
     copy_id: int
-
+    location_id: Optional[int] = None  # 添加位置ID字段
     qr_code: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     book_title: Optional[str] = None
+    location_name: Optional[str] = None  # 添加位置名称字段
 
     class Config:
         from_attributes = True
@@ -67,7 +68,7 @@ class BookCopyResponse(BookCopyBase):
 class BookCopyStatusUpdate(BaseModel):
     status: str
     condition: Optional[str] = None
-    location: Optional[str] = None  # 添加位置信息字段
+    location_id: Optional[int] = None  # 位置ID
     notes: Optional[str] = None
 
 class BookBorrowStatusResponse(BaseModel):

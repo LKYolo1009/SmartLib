@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, ForeignKey, Date, Text, Numeric, DateTim
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import text
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 from .enums import book_status, book_condition, acquisition_type
 from datetime import datetime
 
@@ -17,7 +17,7 @@ class BookCopy(Base):
     price = Column(Numeric(10,2))
     condition = Column(book_condition, server_default='good')
     status = Column(book_status, server_default='available')
-    location = Column(Text, nullable=True)  # 添加位置信息字段
+    location_id = Column(Integer, ForeignKey('book_locations.location_id'), nullable=True)
     notes = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -26,4 +26,5 @@ class BookCopy(Base):
 
     book = relationship("Book", back_populates="copies")
     borrowing_records = relationship("BorrowingRecord", back_populates="copy")
+    location = relationship("BookLocation", back_populates="book_copies")
     # inventory_checks = relationship("InventoryCheck", back_populates="copy")

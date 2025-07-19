@@ -25,13 +25,18 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         Get book copy with associated book information
         """
         copy = db.query(BookCopy).options(
-            joinedload(BookCopy.book)
+            joinedload(BookCopy.book),
+            joinedload(BookCopy.location)
         ).filter(BookCopy.copy_id == copy_id).first()
 
         if copy:
             # Add book title for easier access
             if copy.book:
                 setattr(copy, "book_title", copy.book.title)
+
+            # Add location name for easier access
+            if copy.location:
+                setattr(copy, "location_name", copy.location.location_name)
 
             # Ensure qr_code is a string
             if copy.qr_code is not None:
@@ -59,7 +64,10 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         try:
             # Try to convert qr_code to UUID before querying
             uuid_obj = uuid.UUID(qr_code)
-            copy = db.query(BookCopy).filter(BookCopy.qr_code == uuid_obj).first()
+            copy = db.query(BookCopy).options(
+                joinedload(BookCopy.book),
+                joinedload(BookCopy.location)
+            ).filter(BookCopy.qr_code == uuid_obj).first()
 
             # Ensure qr_code is converted to string for response
             if copy and copy.qr_code is not None:
@@ -68,6 +76,10 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
                 # Add book title if available
                 if copy.book:
                     setattr(copy, "book_title", copy.book.title)
+
+                # Add location name if available
+                if copy.location:
+                    setattr(copy, "location_name", copy.location.location_name)
 
             return copy
         except ValueError:
@@ -91,13 +103,17 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         book_title: Optional[str] = None,
         status: Optional[str] = None,
         condition: Optional[str] = None,
-        location: Optional[str] = None,  # 添加位置参数
+        location: Optional[str] = None,  # 位置名称（字符串）
+        location_id: Optional[int] = None,  # 位置ID（整数）
         limit: int = 20
     ) -> List[BookCopy]:
         """
         Get book copies filtered by book title and status
         """
-        query = db.query(BookCopy).options(joinedload(BookCopy.book))
+        query = db.query(BookCopy).options(
+            joinedload(BookCopy.book),
+            joinedload(BookCopy.location)
+        )
 
         # Apply filters
         if book_title:
@@ -108,18 +124,26 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
             filters.append(BookCopy.status == status)
         if condition:
             filters.append(BookCopy.condition == condition)
-        if location:  # 添加位置过滤
-            filters.append(BookCopy.location.ilike(f"%{location}%"))
+        if location_id:  # 优先使用 location_id
+            filters.append(BookCopy.location_id == location_id)
+        elif location:  # 如果提供了位置名称，需要先查找对应的 location_id
+            from ..models.book_location import BookLocation
+            location_obj = db.query(BookLocation).filter(BookLocation.location_name == location).first()
+            if location_obj:
+                filters.append(BookCopy.location_id == location_obj.location_id)
 
         if filters:
             query = query.filter(and_(*filters))
 
         copies = query.limit(limit).all()
 
-        # Add book title for easier access and convert UUID to string
+        # Add book title and location name for easier access and convert UUID to string
         for copy in copies:
             if copy.book:
                 setattr(copy, "book_title", copy.book.title)
+
+            if copy.location:
+                setattr(copy, "location_name", copy.location.location_name)
 
             # Ensure qr_code is a string
             if copy.qr_code is not None:
@@ -146,8 +170,13 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
         db.commit()
         db.refresh(db_obj)
 
+        # Add book title if available
         if hasattr(db_obj, 'book') and db_obj.book:
             setattr(db_obj, "book_title", db_obj.book.title)
+
+        # Add location name if available
+        if hasattr(db_obj, 'location') and db_obj.location:
+            setattr(db_obj, "location_name", db_obj.location.location_name)
 
         return db_obj
     def update_status(
@@ -174,14 +203,18 @@ class CRUDBookCopy(CRUDBase[BookCopy, BookCopyCreate, BookCopyUpdate]):
             update_data["condition"] = status_update.condition
 
         # Update location if provided
-        if status_update.location:
-            update_data["location"] = status_update.location
+        if status_update.location_id:
+            update_data["location_id"] = status_update.location_id
 
         updated_copy = super().update(db, db_obj=db_obj, obj_in=update_data)
 
         # Add book title if available
         if hasattr(updated_copy, 'book') and updated_copy.book:
             setattr(updated_copy, "book_title", updated_copy.book.title)
+
+        # Add location name if available
+        if hasattr(updated_copy, 'location') and updated_copy.location:
+            setattr(updated_copy, "location_name", updated_copy.location.location_name)
 
         return updated_copy
 

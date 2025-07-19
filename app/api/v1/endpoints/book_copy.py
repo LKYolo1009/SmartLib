@@ -27,15 +27,23 @@ def get_book_copies(
     condition: Optional[str] = None,
     location: Optional[str] = None,  # 添加位置查询参数
 ):
-
-        return book_copy_crud.get_copies_by_title_and_status(
+    """
+    Get all book copies with optional filtering.
+    
+    - **limit**: Maximum number of copies to return
+    - **book_title**: Filter by book title (optional)
+    - **status**: Filter by status (optional)
+    - **condition**: Filter by condition (optional)
+    - **location**: Filter by location (optional)
+    """
+    return book_copy_crud.get_copies_by_title_and_status(
         db,
         book_title=book_title,
         status=status,
         condition=condition,
         location=location,  # 添加位置参数
         limit=limit
-        )
+    )
     # try:
         # return book_copy_crud.get_copies_by_title_and_status(
         #     db,
@@ -235,7 +243,7 @@ def get_book_borrow_status_by_title(
                 "copy_id": copy.copy_id,
                 "status": copy.status,
                 "condition": copy.condition,
-                "location": copy.location,  # 添加位置信息
+                "location_name": copy.location.location_name if copy.location else None,  # 添加位置信息
                 "borrow_info": None
             }
 
@@ -276,36 +284,31 @@ def get_book_copies_by_location(
     limit: int = 50,
 ):
     """
-    Get book copies by location (shelf, floor, etc.)
+    Retrieve book copies by location name.
     
-    - **location**: Location to search for (e.g., "A区书架", "二楼", "计算机区")
+    - **location**: Location name to search for (e.g., "Main Shelf A", "Reference Section")
     - **status**: Filter by status (optional)
     - **condition**: Filter by condition (optional)
     - **limit**: Maximum number of copies to return
     """
+    # First find the location by name
+    from app.models.book_location import BookLocation
+    location_obj = db.query(BookLocation).filter(BookLocation.location_name == location).first()
+    
+    if not location_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location '{location}' not found"
+        )
+    
+    # Get copies by location_id
     return book_copy_crud.get_copies_by_title_and_status(
         db,
-        location=location,
+        location_id=location_obj.location_id,
         status=status,
         condition=condition,
         limit=limit
     )
 
 
-@router.get("/locations/list", response_model=List[str])
-def get_all_locations(
-    db: Session = Depends(get_db),
-):
-    """
-    Get a list of all unique locations in the library
-    
-    Returns a list of all distinct locations where books are stored
-    """
-    from sqlalchemy import distinct
-    
-    locations = db.query(distinct(BookCopy.location)).filter(
-        BookCopy.location.isnot(None),
-        BookCopy.location != ""
-    ).all()
-    
-    return [location[0] for location in locations if location[0]]
+

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, CheckConstraint, ForeignKey
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 
 class Category(Base):
     __tablename__ = 'dewey_categories'

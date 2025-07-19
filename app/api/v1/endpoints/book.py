@@ -167,6 +167,25 @@ def get_book_by_call_number(
         )
     # Make sure we get a fully populated BookDetail object
     return book_crud.get_with_details(db, book_id=db_book.book_id)
+
+@router.get("/search/id/{book_id}", response_model=BookDetail)
+def get_book_by_id(
+    *,
+    db: Session = Depends(get_db),
+    book_id: int,
+):
+    """
+    Get a book by book ID.
+
+    - **book_id**: Book ID
+    """
+    db_book = book_crud.get_with_details(db, book_id=book_id)
+    if not db_book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found"
+        )
+    return db_book
 #done
 @router.get("/search/title/{title}", response_model=List[BookDetail])
 def search_books_by_title(

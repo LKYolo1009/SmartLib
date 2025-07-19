@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, ForeignKey, DateTime, CheckConstraint, I
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy import event, text
-from .base import Base
+from app.db.session import Base
 from .enums import borrow_status
 
 class BorrowingRecord(Base):
@@ -22,7 +22,7 @@ class BorrowingRecord(Base):
     __table_args__ = (
         # Ensure date logic is correct
         CheckConstraint("borrow_date <= due_date", name='valid_dates'),
-        CheckConstraint("extension_date IS NULL OR extension_date > due_date", 
+        CheckConstraint("extension_date IS NULL OR extension_date < due_date", 
                       name='valid_extension'),
         CheckConstraint("return_date IS NULL OR return_date >= borrow_date", 
                       name='valid_return'),

@@ -1,7 +1,7 @@
 # app/models/base.py
 from datetime import datetime
 from sqlalchemy import Column, Integer, DateTime
-from app.db.base import Base
+from app.db.session import Base
 
 class BaseModel(Base):
     """base class for all models"""

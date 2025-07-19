@@ -7,10 +7,12 @@ from app.crud.author import author_crud
 from app.crud.category import category_crud
 from app.crud.publisher import publisher_crud
 from app.crud.language import language_crud
+from app.crud.book_location import book_location_crud
 from app.schemas.author import AuthorCreate, AuthorResponse, AuthorUpdate
 from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.schemas.publisher import PublisherCreate, PublisherResponse, PublisherUpdate
 from app.schemas.language import LanguageCreate, LanguageResponse, LanguageUpdate
+from app.schemas.book_location import BookLocationResponse
 
 router = APIRouter()
 import logging
@@ -211,3 +213,60 @@ def create_publisher(
         obj_in=publisher_in, 
         publisher_id=new_id
     )
+
+# Location endpoints
+@router.get("/locations", response_model=List[BookLocationResponse], tags=["Metadata"])
+def get_locations(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+):
+    """
+    Retrieve a list of all book locations with their QR codes.
+    
+    Returns all locations in the library with their:
+    - Location ID
+    - Location name
+    - Location description
+    - Location QR code
+    - Creation and update timestamps
+    """
+    return book_location_crud.get_multi(db, skip=skip, limit=limit)
+
+@router.get("/locations/{location_id}", response_model=BookLocationResponse, tags=["Metadata"])
+def get_location(
+    *,
+    db: Session = Depends(get_db),
+    location_id: int,
+):
+    """
+    Retrieve detailed information about a specific location.
+    
+    - **location_id**: Location ID
+    """
+    db_location = book_location_crud.get(db, location_id=location_id)
+    if not db_location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Location not found"
+        )
+    return db_location
+
+@router.get("/locations/location-qr-code/{location_qr_code}", response_model=BookLocationResponse, tags=["Metadata"])
+def get_location_by_qr_code(
+    *,
+    db: Session = Depends(get_db),
+    location_qr_code: str,
+):
+    """
+    Retrieve location information by its location QR code.
+    
+    - **location_qr_code**: Location QR code
+    """
+    db_location = book_location_crud.get_by_location_qr_code(db, location_qr_code=location_qr_code)
+    if not db_location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Location not found"
+        )
+    return db_location

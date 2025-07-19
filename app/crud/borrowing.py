@@ -324,11 +324,16 @@ class CRUDBorrowing(CRUDBase[BorrowingRecord, BorrowCreate, Dict]):
 
         try:
             # Calculate new due date
-            now = datetime.now(timezone.utc)
             new_due_date = borrow.due_date + timedelta(days=days)
 
             # Update borrowing record
-            borrow.extension_date = now
+            # Set extension_date to the current due_date (before extension)
+            # Ensure both dates are in the same timezone
+            current_due_date = borrow.due_date
+            if current_due_date.tzinfo is None:
+                current_due_date = current_due_date.replace(tzinfo=timezone.utc)
+            
+            borrow.extension_date = current_due_date
             borrow.due_date = new_due_date
 
             db.add(borrow)

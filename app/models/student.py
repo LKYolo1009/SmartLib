@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, CheckConstraint, Index, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 from .enums import student_status
 from datetime import datetime
 

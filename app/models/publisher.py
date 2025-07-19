@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 
 class Publisher(Base):
     __tablename__ = 'publishers'
