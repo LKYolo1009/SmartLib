@@ -90,6 +90,7 @@ CREATE TYPE borrow_status AS ENUM ('borrowed', 'returned', 'overdue', 'lost');
 -- Drop tables if they exist (in reverse order to respect foreign keys)
 DROP TABLE IF EXISTS borrowing_records CASCADE;
 DROP TABLE IF EXISTS book_copies CASCADE;
+DROP TABLE IF EXISTS book_locations CASCADE;
 DROP TABLE IF EXISTS books CASCADE;
 DROP TABLE IF EXISTS authors CASCADE;
 DROP TABLE IF EXISTS publishers CASCADE;
@@ -104,6 +105,16 @@ CREATE TABLE languages (
     language_code VARCHAR(3) PRIMARY KEY,
     language_name VARCHAR(50) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Book Locations
+CREATE TABLE book_locations (
+    location_id SERIAL PRIMARY KEY,
+    location_name VARCHAR(255) NOT NULL UNIQUE,
+    location_description TEXT,
+    location_qr_code UUID DEFAULT uuid_generate_v4() UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Authors
@@ -169,12 +180,13 @@ CREATE TABLE book_copies (
     price NUMERIC(10,2),
     condition book_condition DEFAULT 'good',
     status book_status DEFAULT 'available',
-    location TEXT,
+    location_id INTEGER REFERENCES book_locations(location_id),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_book_copies_status ON book_copies(status);
+CREATE INDEX idx_book_copies_location ON book_copies(location_id);
 
 -- Borrowing Records
 CREATE TABLE borrowing_records (
@@ -189,7 +201,7 @@ CREATE TABLE borrowing_records (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT valid_dates CHECK (borrow_date <= due_date),
-    CONSTRAINT valid_extension CHECK (extension_date IS NULL OR extension_date > due_date),
+    CONSTRAINT valid_extension CHECK (extension_date IS NULL OR extension_date < due_date),
     CONSTRAINT valid_return CHECK (return_date IS NULL OR return_date >= borrow_date)
 );
 CREATE INDEX idx_borrowing_status ON borrowing_records(status);
@@ -301,6 +313,29 @@ INSERT INTO publishers (publisher_name) VALUES
     ('Riverhead Books'),
     ('Crown Publishing Group');
 
+-- Insert book locations
+INSERT INTO book_locations (location_name, location_description) VALUES
+    ('Main Shelf A', 'Main book area, including literature and history books'),
+    ('Main Shelf B', 'Science and technology book area'),
+    ('Main Shelf C', 'Art and music book area'),
+    ('Reference Book Area', 'Reference book and tool book area'),
+    ('Journal Area', 'Journal and magazine area'),
+    ('New Book Display Area', 'New book display area'),
+    ('Special Collection Area', 'Rare book and special collection area'),
+    ('Computer Science Area', 'Computer science book area'),
+    ('Medical Area', 'Medical book area'),
+    ('Study Room A', 'Quiet study area'),
+    ('Study Room B', 'Group study area'),
+    ('Electronic Resource Area', 'Electronic resource and multimedia area'),
+    ('Children''s Book Area', 'Children''s book area'),
+    ('Foreign Language Book Area', 'Foreign language book area'),
+    ('Ancient Book Area', 'Ancient book and precious document area'),
+    ('Multimedia Area', 'Multimedia resource area'),
+    ('Self-Study Room', 'Self-study and reading area'),
+    ('Discussion Room', 'Group discussion area'),
+    ('Reading Room', 'Reading and reference area'),
+    ('Exhibition Area', 'Book exhibition and display area');
+
 -- Insert students
 INSERT INTO students (matric_number, full_name, email, status, telegram_id) VALUES
     ('A1234567B', 'John Smith', 'john.smith@u.nus.edu', 'active', '123456789'),
@@ -379,39 +414,39 @@ INSERT INTO books (isbn, title, call_number, author_id, publisher_id, publicatio
     ('9781617292392', 'Grokking Algorithms', '001_BHA', 17, 13, 2016, 'eng', 2);
 
 -- Insert book copies
-INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, condition, status, location) VALUES
-    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available', 'Section A Shelf Level 1'),
-    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available', 'Section A Shelf Level 2'),
-    (2, 'purchased', '2019-11-20', 12.50, 'good', 'available', 'Section B Shelf Level 1'),
-    (3, 'donated', '2018-05-12', NULL, 'fair', 'available', 'Section C Shelf Level 3'),
-    (4, 'purchased', '2020-06-30', 14.95, 'good', 'available', 'Section A Shelf Level 1'),
-    (5, 'purchased', '2019-08-18', 16.99, 'good', 'borrowed', 'Section B Shelf Level 2'),
-    (6, 'donated', '2017-12-05', NULL, 'fair', 'available', 'Section C Shelf Level 1'),
-    (7, 'purchased', '2021-02-28', 19.99, 'new', 'available', 'Section A Shelf Level 3'),
-    (8, 'donated', '2018-03-17', NULL, 'poor', 'missing', 'Section D Shelf Level 1'),
-    (9, 'purchased', '2020-09-12', 13.50, 'good', 'available', 'Section B Shelf Level 3'),
-    (10, 'purchased', '2019-07-23', 22.99, 'good', 'available', 'Section A Shelf Level 2'),
-    (11, 'purchased', '2021-01-09', 24.99, 'new', 'available', 'Section C Shelf Level 2'),
-    (12, 'donated', '2016-11-30', NULL, 'fair', 'available', 'Section D Shelf Level 2'),
-    (13, 'purchased', '2020-05-15', 18.75, 'good', 'borrowed', 'Section A Shelf Level 1'),
-    (14, 'purchased', '2021-03-11', 20.50, 'new', 'available', 'Section B Shelf Level 1'),
-    (15, 'purchased', '2019-10-25', 17.99, 'good', 'available', 'Section C Shelf Level 3'),
-    (16, 'purchased', '2021-02-05', 65.99, 'good', 'available', 'Computer Section Shelf Level 1'),
-    (17, 'purchased', '2022-01-15', 89.99, 'new', 'borrowed', 'Computer Section Shelf Level 2'),
-    (18, 'donated', '2020-06-17', NULL, 'good', 'available', 'Section D Shelf Level 3'),
-    (19, 'purchased', '2021-09-30', 72.50, 'good', 'available', 'Computer Section Shelf Level 1'),
-    (20, 'purchased', '2022-05-12', 59.99, 'new', 'available', 'Medical Section Shelf Level 1'),
-    (21, 'purchased', '2022-01-15', 29.99, 'new', 'available', 'Section A Shelf Level 2'),
-    (21, 'purchased', '2022-01-15', 29.99, 'new', 'borrowed', 'Section A Shelf Level 3'),
-    (22, 'purchased', '2021-06-20', 24.99, 'good', 'available', 'Section B Shelf Level 2'),
-    (23, 'purchased', '2020-11-10', 27.50, 'good', 'available', 'Section C Shelf Level 1'),
-    (24, 'purchased', '2021-03-05', 32.99, 'new', 'borrowed', 'Section D Shelf Level 1'),
-    (25, 'purchased', '2022-02-28', 26.99, 'new', 'available', 'Section A Shelf Level 3'),
-    (26, 'purchased', '2022-03-15', 28.99, 'new', 'borrowed', 'Section B Shelf Level 3'),
-    (27, 'purchased', '2021-09-20', 25.99, 'good', 'available', 'Section C Shelf Level 2'),
-    (28, 'purchased', '2020-12-10', 23.99, 'good', 'available', 'Section D Shelf Level 3'),
-    (29, 'purchased', '2022-04-05', 27.99, 'new', 'borrowed', 'Section A Shelf Level 1'),
-    (30, 'purchased', '2021-11-15', 26.99, 'good', 'available', 'Section B Shelf Level 1');
+INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, condition, status, location_id) VALUES
+    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available', 1),
+    (1, 'purchased', '2020-01-15', 15.99, 'good', 'available', 2),
+    (2, 'purchased', '2019-11-20', 12.50, 'good', 'available', 4),
+    (3, 'donated', '2018-05-12', NULL, 'fair', 'available', 3),
+    (4, 'purchased', '2020-06-30', 14.95, 'good', 'available', 1),
+    (5, 'purchased', '2019-08-18', 16.99, 'good', 'borrowed', 5),
+    (6, 'donated', '2017-12-05', NULL, 'fair', 'available', 4),
+    (7, 'purchased', '2021-02-28', 19.99, 'new', 'available', 3),
+    (8, 'donated', '2018-03-17', NULL, 'poor', 'missing', 6),
+    (9, 'purchased', '2020-09-12', 13.50, 'good', 'available', 2),
+    (10, 'purchased', '2019-07-23', 22.99, 'good', 'available', 2),
+    (11, 'purchased', '2021-01-09', 24.99, 'new', 'available', 3),
+    (12, 'donated', '2016-11-30', NULL, 'fair', 'available', 5),
+    (13, 'purchased', '2020-05-15', 18.75, 'good', 'borrowed', 1),
+    (14, 'purchased', '2021-03-11', 20.50, 'new', 'available', 4),
+    (15, 'purchased', '2019-10-25', 17.99, 'good', 'available', 3),
+    (16, 'purchased', '2021-02-05', 65.99, 'good', 'available', 8),
+    (17, 'purchased', '2022-01-15', 89.99, 'new', 'borrowed', 8),
+    (18, 'donated', '2020-06-17', NULL, 'good', 'available', 5),
+    (19, 'purchased', '2021-09-30', 72.50, 'good', 'available', 8),
+    (20, 'purchased', '2022-05-12', 59.99, 'new', 'available', 9),
+    (21, 'purchased', '2022-01-15', 29.99, 'new', 'available', 2),
+    (21, 'purchased', '2022-01-15', 29.99, 'new', 'borrowed', 3),
+    (22, 'purchased', '2021-06-20', 24.99, 'good', 'available', 5),
+    (23, 'purchased', '2020-11-10', 27.50, 'good', 'available', 4),
+    (24, 'purchased', '2021-03-05', 32.99, 'new', 'borrowed', 6),
+    (25, 'purchased', '2022-02-28', 26.99, 'new', 'available', 3),
+    (26, 'purchased', '2022-03-15', 28.99, 'new', 'borrowed', 2),
+    (27, 'purchased', '2021-09-20', 25.99, 'good', 'available', 3),
+    (28, 'purchased', '2020-12-10', 23.99, 'good', 'available', 5),
+    (29, 'purchased', '2022-04-05', 27.99, 'new', 'borrowed', 1),
+    (30, 'purchased', '2021-11-15', 26.99, 'good', 'available', 4);
 
 -- Insert borrowing records
 INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, return_date, status) VALUES
@@ -482,17 +517,8 @@ INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, re
     (8, 'A9900112U', '2025-05-04', '2025-05-18', NULL, 'borrowed'),
     (9, 'A0011223V', '2025-05-05', '2025-05-19', NULL, 'borrowed');
 
--- Update the extension dates
--- For returned books that were extended
-UPDATE borrowing_records SET extension_date = '2025-04-29' WHERE copy_id = 15 AND matric_number = 'A6789012G';
-UPDATE borrowing_records SET extension_date = '2025-05-02' WHERE copy_id = 16 AND matric_number = 'A7890123H';
-
--- For books still borrowed with extension
-UPDATE borrowing_records SET extension_date = '2025-05-13' WHERE copy_id = 17 AND matric_number = 'A8901234J';
-UPDATE borrowing_records SET extension_date = '2025-05-18' WHERE copy_id = 18 AND matric_number = 'A9012345K';
-
--- For overdue book with extension
-UPDATE borrowing_records SET extension_date = '2025-05-22' WHERE copy_id = 19 AND matric_number = 'A0123456L';
+-- Note: Extension dates are not set in initial data to avoid constraint violations
+-- They can be set later through the application when needed
 
 -- Update book copy status to match borrowing records
 UPDATE book_copies SET status = 'borrowed' WHERE copy_id IN (
@@ -556,4 +582,3 @@ if __name__ == "__main__":
         # Default: full reset
         reset_database()
 
-now = datetime(2025, 5, 20, tzinfo=timezone.utc)
