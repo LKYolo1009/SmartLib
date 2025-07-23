@@ -21,6 +21,7 @@ ENDPOINTS = {
     "daily": f"{API_BASE_URL}/api/v1/statistics/daily",
     "copies": f"{API_BASE_URL}/api/v1/book_copies/?limit=9999",
     "books": f"{API_BASE_URL}/api/v1/book/?limit=9999",
+    "metadata/locations": f"{API_BASE_URL}/api/v1/metadata/locations",
 }
 
 # 🎨 现代化配色方案 - 基于 Tailwind CSS 色彩系统

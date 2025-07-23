@@ -15,6 +15,14 @@ python -m venv venv
 source venv/bin/activate  # Linux/Mac
 .\venv\Scripts\activate   # Windows
 ```
+> Note: if we want to fully test the working code of streamlit dashboard in the virtual environment, we need to create the virtual environment in python 3.12 because we are using **streamlit.Page()** which is not supported by python 3.13 yet.
+To create the virtual environment in python 3.12, firstly make sure your computer has python 3.12 installed and then use the following command instead: 
+
+```bash
+python3.12 -m venv venv # indicating the version number is the only change from the previous instruction.
+source venv/bin/activate  # Linux/Mac
+.\venv\Scripts\activate   # Windows
+```
 
 2. Install dependencies:
 ```bash
