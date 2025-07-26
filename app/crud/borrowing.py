@@ -260,46 +260,41 @@ class CRUDBorrowing(CRUDBase[BorrowingRecord, BorrowCreate, Dict]):
             )
 
     def return_book(self, db: Session, *, borrow_id: int) -> BorrowingRecord:
-        """Return a book"""
-        borrow = self.get(db, borrow_id=borrow_id)
-        if not borrow:
+        """Return a borrowed book"""
+        # Get the borrowing record
+        record = db.query(BorrowingRecord).filter(BorrowingRecord.borrow_id == borrow_id).first()
+        if not record:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Borrowing record with ID {borrow_id} not found"
+                detail="Borrowing record not found"
             )
 
-        if borrow.return_date is not None:
+        if record.return_date:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Book has already been returned on {borrow.return_date}"
+                detail="Book has already been returned"
             )
 
-        try:
-            # Update borrowing record
-            now = datetime.now(timezone.utc)
-            borrow.return_date = now
-            borrow.status = BorrowStatus.RETURNED
+        # Update the borrowing record
+        now = datetime.now(timezone.utc)
+        record.return_date = now
+        record.status = "returned"
+        record.updated_at = now
 
-            # Update book copy status
-            book_copy = db.query(BookCopy).filter(BookCopy.copy_id == borrow.copy_id).first()
-            if book_copy:
-                book_copy.status = 'available'
-                db.add(book_copy)
+        # Update the book copy status to available
+        from ..crud.book_copy import book_copy_crud
+        book_copy = book_copy_crud.get(db, copy_id=record.copy_id)
+        if book_copy:
+            book_copy.status = "available"
+            book_copy.updated_at = now
 
-            db.add(borrow)
-            db.commit()
-            db.refresh(borrow)
+        db.commit()
+        db.refresh(record)
 
-            # Add computed fields
-            self._add_computed_fields(borrow)
+        # Add computed fields
+        self._add_computed_fields(record)
 
-            return borrow
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e)
-            )
+        return record
 
     def extend_due_date(self, db: Session, *, borrow_id: int, days: int) -> BorrowingRecord:
         """Extend the due date of a borrowing record"""
@@ -527,7 +522,10 @@ class CRUDBorrowing(CRUDBase[BorrowingRecord, BorrowCreate, Dict]):
         matric_number: Optional[str] = None
     ) -> List[BorrowingRecord]:
         """Get active borrowings with filters"""
-        query = db.query(BorrowingRecord).filter(
+        query = db.query(BorrowingRecord).options(
+            joinedload(BorrowingRecord.student),
+            joinedload(BorrowingRecord.copy).joinedload(BookCopy.book)
+        ).filter(
             BorrowingRecord.return_date.is_(None)
         )
 

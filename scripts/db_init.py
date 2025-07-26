@@ -528,6 +528,30 @@ UPDATE book_copies SET status = 'borrowed' WHERE copy_id IN (
     17, 18, 19,          -- Extended books (still borrowed)
     5, 6, 7, 8, 9        -- Current borrowings
 );
+
+-- Update book copy status to 'available' for copies that have been returned
+-- This ensures consistency between book_copies and borrowing_records tables
+UPDATE book_copies SET status = 'available' WHERE copy_id IN (
+    1, 2, 3, 4, 10, 11, 12, 15, 16, 20,  -- Copies that have been returned
+    28, 30, 22, 24, 26, 29, 21           -- Additional copies that have been returned
+);
+
+-- Sync book copy status with borrowing records to ensure data consistency
+-- This query updates book_copies.status based on the latest borrowing record for each copy
+UPDATE book_copies 
+SET status = CASE 
+    WHEN latest_borrow.return_date IS NULL THEN 'borrowed'
+    ELSE 'available'
+END
+FROM (
+    SELECT DISTINCT ON (copy_id) 
+        copy_id, 
+        return_date,
+        status
+    FROM borrowing_records 
+    ORDER BY copy_id, borrow_date DESC
+) AS latest_borrow
+WHERE book_copies.copy_id = latest_borrow.copy_id;
 -- Set search path to public schema
 SET search_path TO public;
 """

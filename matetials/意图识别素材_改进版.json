@@ -1,0 +1,247 @@
+[
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "我想查一下《百年孤独》现在还能借吗？",
+    "output": "{\"intent\": \"query_book_inventory\", \"entities\": {\"book_title\": \"百年孤独\", \"student_id\": \"\", \"time_range\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "帮我看看张伟上个月借了哪些书？",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"student_id\": \"张伟\", \"time_range\": \"last_month\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "刘慈欣写的书有哪些？",
+    "output": "{\"intent\": \"query_book_by_author\", \"entities\": {\"author_name\": \"刘慈欣\", \"category_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "科幻类图书有哪些？",
+    "output": "{\"intent\": \"query_book_by_category\", \"entities\": {\"category_name\": \"科幻\", \"author_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "学号2021001的学生借阅情况",
+    "output": "{\"intent\": \"query_student_borrowing\", \"entities\": {\"student_id\": \"2021001\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查询逾期图书",
+    "output": "{\"intent\": \"query_overdue_books\", \"entities\": {\"time_range\": \"\", \"date\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "统计本月热门图书",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"this_month\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查找《三体》这本书",
+    "output": "{\"intent\": \"query_book_by_title\", \"entities\": {\"book_title\": \"三体\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "金庸的武侠小说",
+    "output": "{\"intent\": \"query_book_by_author\", \"entities\": {\"author_name\": \"金庸\", \"category_name\": \"武侠\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "计算机类图书",
+    "output": "{\"intent\": \"query_book_by_category\", \"entities\": {\"category_name\": \"计算机\", \"author_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "最近30天的借阅记录",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"time_range\": \"last_30_days\", \"student_id\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "2023年12月25日的借阅情况",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"date\": \"2023-12-25\", \"student_id\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查询《活着》的库存",
+    "output": "{\"intent\": \"query_book_inventory\", \"entities\": {\"book_title\": \"活着\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "文学类图书统计",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"category_name\": \"文学\", \"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "学生ID 2021002的借阅历史",
+    "output": "{\"intent\": \"query_student_borrowing\", \"entities\": {\"student_id\": \"2021002\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "本月的逾期情况",
+    "output": "{\"intent\": \"query_overdue_books\", \"entities\": {\"time_range\": \"this_month\", \"date\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Find books by Liu Cixin",
+    "output": "{\"intent\": \"query_book_by_author\", \"entities\": {\"author_name\": \"Liu Cixin\", \"category_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Science fiction books",
+    "output": "{\"intent\": \"query_book_by_category\", \"entities\": {\"category_name\": \"Science fiction\", \"author_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "How many books are in stock?",
+    "output": "{\"intent\": \"query_book_inventory\", \"entities\": {\"book_title\": \"\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Borrowing records for student 2021003",
+    "output": "{\"intent\": \"query_student_borrowing\", \"entities\": {\"student_id\": \"2021003\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Last 7 days borrowing records",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"time_range\": \"last_7_days\", \"student_id\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Overdue books this month",
+    "output": "{\"intent\": \"query_overdue_books\", \"entities\": {\"time_range\": \"this_month\", \"date\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Generate statistics report",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Find the book 'The Three-Body Problem'",
+    "output": "{\"intent\": \"query_book_by_title\", \"entities\": {\"book_title\": \"The Three-Body Problem\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Books by Liu Cixin borrowed this month",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"author_name\": \"Liu Cixin\", \"time_range\": \"this_month\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "Borrowing records on 2023-12-25",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"date\": \"2023-12-25\", \"student_id\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查找书",
+    "output": "{\"intent\": \"query_book_by_title\", \"entities\": {\"book_title\": \"\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "作者的书",
+    "output": "{\"intent\": \"query_book_by_author\", \"entities\": {\"author_name\": \"\", \"category_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查询学生借阅情况",
+    "output": "{\"intent\": \"query_student_borrowing\", \"entities\": {\"student_id\": \"\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "统计报表",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查询库存",
+    "output": "{\"intent\": \"query_book_inventory\", \"entities\": {\"book_title\": \"\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "借阅记录",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"student_id\": \"\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "逾期图书",
+    "output": "{\"intent\": \"query_overdue_books\", \"entities\": {\"time_range\": \"\", \"date\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "热门图书",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "图书统计",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "学生借阅",
+    "output": "{\"intent\": \"query_student_borrowing\", \"entities\": {\"student_id\": \"\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "按作者查询",
+    "output": "{\"intent\": \"query_book_by_author\", \"entities\": {\"author_name\": \"\", \"category_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "按类别查询",
+    "output": "{\"intent\": \"query_book_by_category\", \"entities\": {\"category_name\": \"\", \"author_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "图书库存",
+    "output": "{\"intent\": \"query_book_inventory\", \"entities\": {\"book_title\": \"\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "借阅情况",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"student_id\": \"\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "逾期情况",
+    "output": "{\"intent\": \"query_overdue_books\", \"entities\": {\"time_range\": \"\", \"date\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "统计信息",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查询图书",
+    "output": "{\"intent\": \"query_book_by_title\", \"entities\": {\"book_title\": \"\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "查找作者",
+    "output": "{\"intent\": \"query_book_by_author\", \"entities\": {\"author_name\": \"\", \"category_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "分类查询",
+    "output": "{\"intent\": \"query_book_by_category\", \"entities\": {\"category_name\": \"\", \"author_name\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "库存查询",
+    "output": "{\"intent\": \"query_book_inventory\", \"entities\": {\"book_title\": \"\", \"status\": \"\", \"condition\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "借阅查询",
+    "output": "{\"intent\": \"query_borrowing_records\", \"entities\": {\"student_id\": \"\", \"time_range\": \"\", \"book_title\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "逾期查询",
+    "output": "{\"intent\": \"query_overdue_books\", \"entities\": {\"time_range\": \"\", \"date\": \"\"}}"
+  },
+  {
+    "instruction": "请识别用户的查询意图，并从中提取出关键实体，返回格式为 JSON。",
+    "input": "统计查询",
+    "output": "{\"intent\": \"query_statistics\", \"entities\": {\"time_range\": \"\", \"book_title\": \"\", \"author_name\": \"\", \"category_name\": \"\"}}"
+  }
+] 

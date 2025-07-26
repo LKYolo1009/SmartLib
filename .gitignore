@@ -15,6 +15,7 @@ app/db/__pycache__/
 app/models/__pycache__/
 app/schemas/__pycache__/
 app/service/__pycache__/
+app/api/v1/endpoints/__pycache__/
 
 # Python compiled files
 *.cpython-*.pyc

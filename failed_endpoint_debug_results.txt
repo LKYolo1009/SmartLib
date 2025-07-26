@@ -1,0 +1,363 @@
+失败端点详细调试结果
+============================================================
+测试时间: 2025-06-17 21:30:11
+
+
+----------------------------------------
+端点: GET /book-copy/ (应为book_copies)
+URL: http://localhost:8000/api/v1/book_copies/
+状态码: 200
+Headers: {
+  "date": "Tue, 17 Jun 2025 13:30:02 GMT",
+  "server": "uvicorn",
+  "content-length": "6520",
+  "content-type": "application/json"
+}
+响应JSON: [
+  {
+    "book_id": 1,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2020-01-15",
+    "price": 15.99,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 2,
+    "qr_code": "8ba35136-3a10-48dc-897d-3392cdcb204b",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Harry Potter and the Philosopher's Stone"
+  },
+  {
+    "book_id": 1,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2020-01-15",
+    "price": 15.99,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 1,
+    "qr_code": "c4a89b0d-4740-4ff3-8eec-feaf5478cba6",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Harry Potter and the Philosopher's Stone"
+  },
+  {
+    "book_id": 2,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2019-11-20",
+    "price": 12.5,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 3,
+    "qr_code": "710056ef-2104-4420-a1af-82854b27fa18",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "1984"
+  },
+  {
+    "book_id": 3,
+    "acquisition_type": "donated",
+    "acquisition_date": "2018-05-12",
+    "price": null,
+    "condition": "fair",
+    "status": "available",
+    "notes": null,
+    "copy_id": 4,
+    "qr_code": "bd1c068d-75a9-43e4-8975-5b395502a1ac",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Pride and Prejudice"
+  },
+  {
+    "book_id": 4,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2020-06-30",
+    "price": 14.95,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 5,
+    "qr_code": "f1777827-78a2-4a6a-997a-ba8f0e6e0a4a",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "The Great Gatsby"
+  },
+  {
+    "book_id": 5,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2019-08-18",
+    "price": 16.99,
+    "condition": "good",
+    "status": "borrowed",
+    "notes": null,
+    "copy_id": 6,
+    "qr_code": "b47c3189-1f85-4375-a6cf-55a17da6a33e",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "To Kill a Mockingbird"
+  },
+  {
+    "book_id": 6,
+    "acquisition_type": "donated",
+    "acquisition_date": "2017-12-05",
+    "price": null,
+    "condition": "fair",
+    "status": "available",
+    "notes": null,
+    "copy_id": 7,
+    "qr_code": "95f65218-c8da-4a56-a2ad-753efa72003c",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Murder on the Orient Express"
+  },
+  {
+    "book_id": 7,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2021-02-28",
+    "price": 19.99,
+    "condition": "new",
+    "status": "available",
+    "notes": null,
+    "copy_id": 8,
+    "qr_code": "88c0ab10-1b6a-4759-a38b-bb0d8781d09e",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "The Hobbit"
+  },
+  {
+    "book_id": 8,
+    "acquisition_type": "donated",
+    "acquisition_date": "2018-03-17",
+    "price": null,
+    "condition": "poor",
+    "status": "missing",
+    "notes": null,
+    "copy_id": 9,
+    "qr_code": "c007634f-840c-451d-8c22-eda6def7c1f0",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "A Tale of Two Cities"
+  },
+  {
+    "book_id": 9,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2020-09-12",
+    "price": 13.5,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 10,
+    "qr_code": "6d86dd48-82d5-4918-9927-d14873b7e60c",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Adventures of Huckleberry Finn"
+  },
+  {
+    "book_id": 10,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2019-07-23",
+    "price": 22.99,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 11,
+    "qr_code": "8748dd6a-1dcf-48c4-bb5e-d87e2466e3ca",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "War and Peace"
+  },
+  {
+    "book_id": 11,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2021-01-09",
+    "price": 24.99,
+    "condition": "new",
+    "status": "available",
+    "notes": null,
+    "copy_id": 12,
+    "qr_code": "5638a7b1-3b3d-4fe6-bcbd-cad5da96664e",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "1Q84"
+  },
+  {
+    "book_id": 12,
+    "acquisition_type": "donated",
+    "acquisition_date": "2016-11-30",
+    "price": null,
+    "condition": "fair",
+    "status": "available",
+    "notes": null,
+    "copy_id": 13,
+    "qr_code": "b261b550-7b94-455a-9bd4-cf39904bad6d",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "One Hundred Years of Solitude"
+  },
+  {
+    "book_id": 13,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2020-05-15",
+    "price": 18.75,
+    "condition": "good",
+    "status": "borrowed",
+    "notes": null,
+    "copy_id": 14,
+    "qr_code": "4f2c0fa3-81c7-4736-93c5-98ab9134c9d2",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "The Handmaid's Tale"
+  },
+  {
+    "book_id": 14,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2021-03-11",
+    "price": 20.5,
+    "condition": "new",
+    "status": "available",
+    "notes": null,
+    "copy_id": 15,
+    "qr_code": "cc472f4d-eb9a-447a-bbab-58ef406a04a4",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "American Gods"
+  },
+  {
+    "book_id": 15,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2019-10-25",
+    "price": 17.99,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 16,
+    "qr_code": "25991f34-1c40-46d6-afe4-b67445caf4cc",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "The Shining"
+  },
+  {
+    "book_id": 16,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2021-02-05",
+    "price": 65.99,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 17,
+    "qr_code": "8c7adf8d-b1bc-4ee1-b87c-a5f861e4e59f",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Introduction to Algorithms"
+  },
+  {
+    "book_id": 17,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2022-01-15",
+    "price": 89.99,
+    "condition": "new",
+    "status": "borrowed",
+    "notes": null,
+    "copy_id": 18,
+    "qr_code": "6b1b2c48-ed03-4166-bc49-548099de9c85",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Artificial Intelligence: A Modern Approach"
+  },
+  {
+    "book_id": 18,
+    "acquisition_type": "donated",
+    "acquisition_date": "2020-06-17",
+    "price": null,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 19,
+    "qr_code": "066d6047-058f-4375-8dc0-1ed482339910",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Data Science For Dummies"
+  },
+  {
+    "book_id": 19,
+    "acquisition_type": "purchased",
+    "acquisition_date": "2021-09-30",
+    "price": 72.5,
+    "condition": "good",
+    "status": "available",
+    "notes": null,
+    "copy_id": 20,
+    "qr_code": "5c1e10af-3e80-4f68-9507-4997b2414bbc",
+    "created_at": "2025-06-14T23:12:08.632403",
+    "updated_at": "2025-06-14T23:12:08.632403",
+    "book_title": "Computer Networks"
+  }
+]
+----------------------------------------
+端点: GET /book-copy/title/{title}/status (应为book_copies)
+URL: http://localhost:8000/api/v1/book_copies/title/Harry/status
+状态码: 200
+Headers: {
+  "date": "Tue, 17 Jun 2025 13:30:04 GMT",
+  "server": "uvicorn",
+  "content-length": "266",
+  "content-type": "application/json"
+}
+响应JSON: [
+  {
+    "book_id": 1,
+    "title": "Harry Potter and the Philosopher's Stone",
+    "total_copies": 2,
+    "available_copies": 2,
+    "copies_info": [
+      {
+        "copy_id": 1,
+        "status": "available",
+        "condition": "good",
+        "borrow_info": null
+      },
+      {
+        "copy_id": 2,
+        "status": "available",
+        "condition": "good",
+        "borrow_info": null
+      }
+    ]
+  }
+]
+----------------------------------------
+端点: GET /borrowing/student/{identifier}
+URL: http://localhost:8000/api/v1/borrowing/student/A1234567B
+状态码: 500
+Headers: {
+  "date": "Tue, 17 Jun 2025 13:30:06 GMT",
+  "server": "uvicorn",
+  "content-length": "21",
+  "content-type": "text/plain; charset=utf-8"
+}
+响应文本: Internal Server Error
+----------------------------------------
+端点: GET /borrowing/student/{identifier}/history
+URL: http://localhost:8000/api/v1/borrowing/student/A1234567B/history
+状态码: 500
+Headers: {
+  "date": "Tue, 17 Jun 2025 13:30:09 GMT",
+  "server": "uvicorn",
+  "content-length": "21",
+  "content-type": "text/plain; charset=utf-8"
+}
+响应文本: Internal Server Error
+----------------------------------------
+端点: GET /borrowing/stats
+URL: http://localhost:8000/api/v1/borrowing/stats
+状态码: 500
+Headers: {
+  "date": "Tue, 17 Jun 2025 13:30:11 GMT",
+  "server": "uvicorn",
+  "content-length": "21",
+  "content-type": "text/plain; charset=utf-8"
+}
+响应文本: Internal Server Error
+----------------------------------------
