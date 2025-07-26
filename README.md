@@ -27,186 +27,54 @@
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 .\venv\Scripts\activate   # Windows
+```
+> Note: if we want to fully test the working code of streamlit dashboard in the virtual environment, we need to create the virtual environment in python 3.12 because we are using **streamlit.Page()** which is not supported by python 3.13 yet.
+To create the virtual environment in python 3.12, firstly make sure your computer has python 3.12 installed and then use the following command instead: 
 
-# 安装依赖
+```bash
+python3.12 -m venv venv # indicating the version number is the only change from the previous instruction.
+source venv/bin/activate  # Linux/Mac
+.\venv\Scripts\activate   # Windows
+```
+
+2. Install dependencies:
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. LLM设置 (可选，推荐)
-
-```bash
-# 安装Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 下载Llama3.2模型
-ollama pull llama3.2
-
-# 启动Ollama服务
-ollama serve
-```
-
-### 3. 数据库初始化
-
+3. **Initialize the database** (optional, for first-time setup or reset):
 ```bash
 # 完整重置 (首次安装)
 python scripts/db_init.py reset
-
-# 仅清理数据
-python scripts/db_init.py clean
-
-# 仅初始化结构
-python scripts/db_init.py init
 ```
+- Clean data only: `python scripts/db_init.py clean`
+- Initialize only: `python scripts/db_init.py init`
 
-### 4. 启动服务
-
+4. **Start the FastAPI backend service:**
 ```bash
-# 启动FastAPI后端
-uvicorn app.main:app --reload --port 8000
-
-# 启动Streamlit管理看板
-streamlit run admin_dashboard/main.py
+uvicorn app.main:app --reload
 ```
+The service will start at: http://localhost:8000
 
-### 5. 验证服务
-
-- **API文档**: http://localhost:8000/docs
-- **管理看板**: http://localhost:8501
-- **LLM状态**: http://localhost:8000/api/v1/llm-query/llm-status
-
-## 🧠 智能查询系统
-
-### 双模式运行
-
-| 模式 | 特点 | 响应时间 | 适用场景 |
-|------|------|----------|----------|
-| **LLM增强** | 智能理解、复杂查询 | 2-8s | 复杂语义、模糊表达 |
-| **规则基础** | 快速匹配、稳定可靠 | 100-300ms | 标准查询、高频操作 |
-
-### 支持的查询类型
-
-- **图书查询**: "查找《三体》"、"鲁迅的作品有哪些？"
-- **库存管理**: "查询图书库存"、"哪些书可以借阅？"
-- **借阅记录**: "张三的借阅记录"、"最近30天的借阅情况"
-- **统计分析**: "最热门的10本书"、"借阅量最高的图书"
-- **逾期管理**: "有哪些逾期的书？"、"超期未还的书籍"
-
-### 复杂查询示例
-
-```bash
-# LLM增强查询
-curl -X POST "http://localhost:8000/api/v1/llm-query/ask" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "帮我找找适合计算机专业学生的Python编程书籍",
-    "use_llm": true
-  }'
-
-# 复杂分析查询
-curl -X POST "http://localhost:8000/api/v1/llm-query/complex-query" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "统计本月借阅量最高的科技类图书，显示作者和库存状态"
-  }'
-```
-
-## 📊 管理员看板
-
-### 核心功能
-
-- **实时KPI监控**: 图书总量、借阅量、逾期警报、活跃用户
-- **趋势分析**: 借阅趋势、类别分布、热门排行
-- **QR码标签生成**: 批量生成图书标签，支持PDF导出
-- **交互式图表**: 可缩放、筛选、排序的数据可视化
-
-### 快速访问
-
+5. **Start the Streamlit dashboard:**
 ```bash
 # 启动看板
 streamlit run admin_dashboard/main.py
-
-# 访问地址
-http://localhost:8501
 ```
 
-## 🔧 配置说明
 
-### 环境变量 (.env)
+## API Documentation
 
-```env
-# LLM配置
-SMARTLIB_LLM_ENDPOINT=http://localhost:11434
-SMARTLIB_LLM_MODEL_NAME=llama3.2
-SMARTLIB_LLM_TIMEOUT=60
-
-# 功能开关
-SMARTLIB_ENABLE_LLM_NLU=true
-SMARTLIB_ENABLE_LLM_SQL=true
-SMARTLIB_ENABLE_FALLBACK=true
-
-# Redis配置 (可选)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-```
-
-## 🧪 测试和演示
-
-### 快速演示
-
-```bash
-# NLU功能演示
-python demo_nlu.py
-
-# 完整查询流程演示
-python demo_query_generator.py
-
-# 多轮对话演示
-python demo_dialog_context.py
-
-# LLM集成演示
-python demo_llm_integration.py
-```
-
-### 运行测试
-
-```bash
-# 单元测试
-python test_nlu.py
-python test_query_generator.py
-python test_dialog_context.py
-
-# 端点测试
-python test_endpoints.py
-```
-
-## 📈 性能指标
-
-- **规则系统**: 100-300ms响应时间
-- **LLM增强**: 2-8s (首次) → 1-3s (后续)
-- **自动降级**: 500ms内完成切换
-- **并发支持**: 支持多用户同时查询
-
-## 🚨 故障排除
-
-### 常见问题
-
-1. **LLM服务不可用**
-   ```bash
-   ollama ps  # 检查状态
-   ollama serve  # 重启服务
-   ```
-
-2. **响应时间过长**
-   - 使用量化模型: `ollama pull llama3.2:8b-instruct-q4_0`
-   - 启用缓存: `SMARTLIB_ENABLE_RESULT_CACHE=true`
-
-3. **Redis连接失败**
-   - 系统自动降级到内存存储
-   - 不影响基本功能
+After starting the service, you can access the API documentation at:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 
-## 🖼️ 系统截图
+
+
+## Dashboard Screenshots
+
+The Streamlit dashboard looks like this:
 
 ![Dashboard Example 1](assets/dashboard2.png)
 ![Dashboard Example 2](assets/dashboard1.png)
