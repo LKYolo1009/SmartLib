@@ -28,7 +28,7 @@ def clean_database():
         -- 1. Drop all tables if they exist (in reverse order to respect foreign keys)
         DROP TABLE IF EXISTS borrowing_records CASCADE;
         DROP TABLE IF EXISTS book_copies CASCADE;
-                DROP TABLE IF EXISTS books CASCADE;
+        DROP TABLE IF EXISTS books CASCADE;
         DROP TABLE IF EXISTS authors CASCADE;
         DROP TABLE IF EXISTS publishers CASCADE;
         DROP TABLE IF EXISTS dewey_categories CASCADE;
@@ -41,9 +41,6 @@ def clean_database():
         DROP TYPE IF EXISTS acquisition_type CASCADE;
         DROP TYPE IF EXISTS borrow_status CASCADE;
         DROP TYPE IF EXISTS student_status CASCADE;
-
-        -- 3. Drop UUID extension if it exists (optional, usually safe to keep)
-        -- DROP EXTENSION IF EXISTS "uuid-ossp";
 
         COMMIT;
         """
@@ -391,28 +388,7 @@ INSERT INTO books (isbn, title, call_number, author_id, publisher_id, publicatio
     ('9781501111105', 'Grit: The Power of Passion and Perseverance', '150_DUC', 27, 3, 2016, 'eng', 3),
     ('9781591846352', 'Start with Why', '650_SIN', 28, 3, 2009, 'eng', 3),
     ('9781982137278', 'Think Again', '150_GRA', 29, 3, 2021, 'eng', 3),
-    ('9781592408412', 'Daring Greatly', '150_BRO', 30, 1, 2012, 'eng', 3),
-    -- Additional 20 books
-    ('9780141187761', 'Brave New World', '800_HUX', 2, 1, 1932, 'eng', 17),
-    ('9780679783268', 'Crime and Punishment', '800_DOS', 10, 1, 1866, 'eng', 17),
-    ('9780316769174', 'The Catcher in the Rye', '800_SAL', 4, 3, 1951, 'eng', 16),
-    ('9780140283334', 'On the Road', '800_KER', 9, 1, 1957, 'eng', 17),
-    ('9780679720201', 'The Stranger', '800_CAM', 3, 1, 1942, 'eng', 17),
-    ('9780553213119', 'Don Quixote', '800_CER', 12, 2, 1605, 'eng', 17),
-    ('9780140449266', 'Anna Karenina', '800_TOL', 10, 1, 1877, 'eng', 17),
-    ('9780679732761', 'Lolita', '800_NAB', 8, 1, 1955, 'eng', 17),
-    ('9780679732259', 'Invisible Man', '800_ELL', 5, 1, 1952, 'eng', 17),
-    ('9780679723165', 'The Sound and the Fury', '800_FAU', 4, 1, 1929, 'eng', 17),
-    ('9780596007126', 'Head First Design Patterns', '001_FRE', 16, 15, 2004, 'eng', 2),
-    ('9780201633610', 'Design Patterns', '001_GAM', 16, 14, 1994, 'eng', 2),
-    ('9780596516178', 'The Pragmatic Programmer', '001_HUN', 19, 15, 1999, 'eng', 2),
-    ('9780135957059', 'Refactoring', '001_FOW', 17, 14, 2018, 'eng', 2),
-    ('9780321125217', 'Domain-Driven Design', '001_EVA', 18, 14, 2003, 'eng', 2),
-    ('9781491904244', 'You Don''t Know JS', '001_SIM', 19, 15, 2015, 'eng', 2),
-    ('9780321751041', 'Clean Code', '001_MAR', 16, 10, 2008, 'eng', 2),
-    ('9780137081073', 'The Clean Coder', '001_MAR', 16, 10, 2011, 'eng', 2),
-    ('9780321934116', 'Soft Skills', '001_SON', 18, 10, 2014, 'eng', 2),
-    ('9781617292392', 'Grokking Algorithms', '001_BHA', 17, 13, 2016, 'eng', 2);
+    ('9781592408412', 'Daring Greatly', '150_BRO', 30, 1, 2012, 'eng', 3);
 
 -- Insert book copies
 INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, condition, status, location_id) VALUES
@@ -449,110 +425,70 @@ INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, con
     (29, 'purchased', '2022-04-05', 27.99, 'new', 'borrowed', 1),
     (30, 'purchased', '2021-11-15', 26.99, 'good', 'available', 4);
 
--- Insert borrowing records
+-- Insert borrowing records (simplified with no duplicate copy_id usage)
 INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, return_date, status) VALUES
-    -- Regular returned books
-    (1, 'A1234567B', '2025-04-05', '2025-04-19', '2025-04-17', 'returned'),
-    (3, 'A2345678C', '2025-04-12', '2025-04-26', '2025-04-24', 'returned'),
-    (7, 'A3456789D', '2025-04-13', '2025-04-27', '2025-04-25', 'returned'),
-    (9, 'A4567890E', '2025-04-14', '2025-04-28', '2025-04-27', 'returned'),
-    (12, 'A5678901F', '2025-04-15', '2025-04-29', '2025-04-28', 'returned'),
-    (14, 'A6789012G', '2025-04-16', '2025-04-30', '2025-04-29', 'returned'),
-    (16, 'A7890123H', '2025-04-17', '2025-05-01', '2025-04-30', 'returned'),
-    (18, 'A8901234J', '2025-04-18', '2025-05-02', '2025-05-01', 'returned'),
-    (2, 'A0123456L', '2025-04-19', '2025-05-03', '2025-05-02', 'returned'),
-    (4, 'A9012345K', '2025-04-20', '2025-05-04', '2025-05-03', 'returned'),
+    -- Regular returned books (mostly 14 days default, some custom periods)
+    (1, 'A1234567B', '2025-04-05', '2025-04-19', '2025-04-17', 'returned'),  -- 14 days, returned early
+    (2, 'A2345678C', '2025-04-12', '2025-04-26', '2025-04-24', 'returned'),  -- 14 days, returned early
+    (3, 'A3456789D', '2025-04-13', '2025-04-20', '2025-04-20', 'returned'),  -- 7 days, returned on time
+    (4, 'A4567890E', '2025-04-14', '2025-04-28', '2025-04-28', 'returned'),  -- 14 days, returned on time
+    (5, 'A5678901F', '2025-04-15', '2025-05-15', '2025-05-10', 'returned'), -- 30 days, returned early
+    (6, 'A6789012G', '2025-04-16', '2025-04-30', '2025-04-30', 'returned'),  -- 14 days, returned on time
+    (7, 'A7890123H', '2025-04-17', '2025-05-01', '2025-05-01', 'returned'),  -- 14 days, returned on time
+    (8, 'A8901234J', '2025-04-18', '2025-05-18', '2025-05-15', 'returned'), -- 30 days, returned early
+    (9, 'A0123456L', '2025-04-19', '2025-05-03', '2025-05-03', 'returned'),  -- 14 days, returned on time
+    (10, 'A9012345K', '2025-04-20', '2025-05-04', '2025-05-04', 'returned'),  -- 14 days, returned on time
 
-    -- Currently borrowed books (not overdue)
-    (22, 'A1122334M', '2025-05-01', '2025-05-15', NULL, 'borrowed'),
-    (24, 'A2233445N', '2025-05-02', '2025-05-16', NULL, 'borrowed'),
-    (26, 'A3344556O', '2025-05-03', '2025-05-17', NULL, 'borrowed'),
-    (29, 'A4455667P', '2025-05-04', '2025-05-18', NULL, 'borrowed'),
-    (21, 'A5566778Q', '2025-05-05', '2025-05-19', NULL, 'borrowed'),
+    -- Currently borrowed books (mostly 14 days default, some custom periods)
+    (11, 'A1122334M', '2025-05-01', '2025-05-15', NULL, 'borrowed'),       -- 14 days
+    (12, 'A2233445N', '2025-05-02', '2025-05-16', NULL, 'borrowed'),       -- 14 days
+    (13, 'A3344556O', '2025-05-03', '2025-05-10', NULL, 'borrowed'),       -- 7 days
+    (14, 'A4455667P', '2025-05-04', '2025-06-03', NULL, 'borrowed'),       -- 30 days
+    (15, 'A5566778Q', '2025-05-05', '2025-05-19', NULL, 'borrowed'),       -- 14 days
 
-    -- Overdue books (still borrowed)
-    (23, 'A6677889R', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
-    (25, 'A7788990S', '2025-04-25', '2025-05-09', NULL, 'borrowed'),
-    (27, 'A8899001T', '2025-04-28', '2025-05-12', NULL, 'borrowed'),
+    -- Overdue books (mostly 14 days default, some custom periods)
+    (16, 'A6677889R', '2025-04-20', '2025-05-04', NULL, 'borrowed'),       -- 14 days, overdue
+    (17, 'A7788990S', '2025-04-25', '2025-05-09', NULL, 'borrowed'),       -- 14 days, overdue
+    (18, 'A8899001T', '2025-04-28', '2025-05-05', NULL, 'borrowed'),       -- 7 days, overdue
 
-    -- More returned books
-    (28, 'A9900112U', '2025-04-15', '2025-04-29', '2025-04-28', 'returned'),
-    (30, 'A0011223V', '2025-04-20', '2025-05-04', '2025-05-03', 'returned'),
-    (22, 'A1122334M', '2025-04-15', '2025-04-29', '2025-04-28', 'returned'),
-    (24, 'A2233445N', '2025-04-16', '2025-04-30', '2025-04-29', 'returned'),
-    (26, 'A3344556O', '2025-04-17', '2025-05-01', '2025-04-30', 'returned'),
-    (29, 'A4455667P', '2025-04-18', '2025-05-02', '2025-05-01', 'returned'),
-    (21, 'A5566778Q', '2025-04-19', '2025-05-03', '2025-05-02', 'returned'),
+    -- More returned books (mostly 14 days default)
+    (19, 'A9900112U', '2025-04-15', '2025-04-29', '2025-04-29', 'returned'), -- 14 days, returned on time
+    (20, 'A0011223V', '2025-04-20', '2025-05-20', '2025-05-18', 'returned'), -- 30 days, returned early
 
-    -- Overdue and returned late
-    (10, 'A1234567B', '2025-04-01', '2025-04-15', '2025-04-20', 'returned'),
-    (11, 'A2345678C', '2025-04-05', '2025-04-19', '2025-04-25', 'returned'),
-    (12, 'A3456789D', '2025-04-10', '2025-04-24', '2025-05-05', 'returned'),
+    -- Overdue and returned late (mostly 14 days default)
+    (21, 'A1234567B', '2025-04-01', '2025-04-15', '2025-04-19', 'returned'), -- 14 days, returned 4 days late
+    (22, 'A2345678C', '2025-04-05', '2025-04-19', '2025-04-25', 'returned'), -- 14 days, returned 6 days late
+    (23, 'A3456789D', '2025-04-10', '2025-04-17', '2025-04-22', 'returned'), -- 7 days, returned 5 days late
 
-    -- Severely overdue (still borrowed)
-    (13, 'A4567890E', '2025-04-15', '2025-04-29', NULL, 'borrowed'),
-    (14, 'A5678901F', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
+    -- Severely overdue (mostly 14 days default)
+    (24, 'A4567890E', '2025-04-15', '2025-04-29', NULL, 'borrowed'),       -- 14 days, severely overdue
+    (25, 'A5678901F', '2025-04-20', '2025-05-20', NULL, 'borrowed'),       -- 30 days, severely overdue
 
-    -- Extended and returned on time
-    (15, 'A6789012G', '2025-04-01', '2025-04-15', '2025-04-29', 'returned'),
-    (16, 'A7890123H', '2025-04-05', '2025-04-19', '2025-05-02', 'returned'),
+    -- Extended and returned on time (mostly 14 days default)
+    (26, 'A6789012G', '2025-04-01', '2025-04-15', '2025-04-29', 'returned'), -- 14 days, extended and returned
+    (27, 'A7890123H', '2025-04-05', '2025-04-19', '2025-05-02', 'returned'), -- 14 days, extended and returned
 
-    -- Extended and still borrowed (not overdue)
-    (17, 'A8901234J', '2025-04-15', '2025-04-29', NULL, 'borrowed'),
-    (18, 'A9012345K', '2025-04-20', '2025-05-04', NULL, 'borrowed'),
+    -- Extended and still borrowed (mostly 14 days default)
+    (28, 'A8901234J', '2025-04-15', '2025-04-29', NULL, 'borrowed'),       -- 14 days, extended
+    (29, 'A9012345K', '2025-04-20', '2025-05-20', NULL, 'borrowed'),       -- 30 days, extended
 
-    -- Extended but overdue
-    (19, 'A0123456L', '2025-04-25', '2025-05-08', NULL, 'borrowed'),
-
-    -- Additional regular borrowings
-    (20, 'A1122334M', '2025-04-01', '2025-04-15', '2025-04-14', 'returned'),
-    (1, 'A2233445N', '2025-04-05', '2025-04-19', '2025-04-18', 'returned'),
-    (2, 'A3344556O', '2025-04-10', '2025-04-24', '2025-04-23', 'returned'),
-    (3, 'A4455667P', '2025-04-15', '2025-04-29', '2025-04-28', 'returned'),
-    (4, 'A5566778Q', '2025-04-20', '2025-05-04', '2025-05-03', 'returned'),
-
-    -- Current borrowings
-    (5, 'A6677889R', '2025-05-01', '2025-05-15', NULL, 'borrowed'),
-    (6, 'A7788990S', '2025-05-02', '2025-05-16', NULL, 'borrowed'),
-    (7, 'A8899001T', '2025-05-03', '2025-05-17', NULL, 'borrowed'),
-    (8, 'A9900112U', '2025-05-04', '2025-05-18', NULL, 'borrowed'),
-    (9, 'A0011223V', '2025-05-05', '2025-05-19', NULL, 'borrowed');
-
--- Note: Extension dates are not set in initial data to avoid constraint violations
--- They can be set later through the application when needed
+    -- Extended but overdue (mostly 14 days default)
+    (30, 'A0123456L', '2025-04-25', '2025-05-09', NULL, 'borrowed');       -- 14 days, extended but overdue
 
 -- Update book copy status to match borrowing records
 UPDATE book_copies SET status = 'borrowed' WHERE copy_id IN (
-    22, 24, 26, 29, 21,  -- Currently borrowed books (not overdue)
-    23, 25, 27,          -- Overdue books (still borrowed)
-    13, 14,              -- Severely overdue (still borrowed)
-    17, 18, 19,          -- Extended books (still borrowed)
-    5, 6, 7, 8, 9        -- Current borrowings
+    11, 12, 13, 14, 15,  -- Currently borrowed books (not overdue)
+    16, 17, 18,          -- Overdue books (still borrowed)
+    24, 25,              -- Severely overdue (still borrowed)
+    28, 29, 30           -- Extended books (still borrowed)
 );
 
 -- Update book copy status to 'available' for copies that have been returned
--- This ensures consistency between book_copies and borrowing_records tables
 UPDATE book_copies SET status = 'available' WHERE copy_id IN (
-    1, 2, 3, 4, 10, 11, 12, 15, 16, 20,  -- Copies that have been returned
-    28, 30, 22, 24, 26, 29, 21           -- Additional copies that have been returned
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,       -- Regular returned books
+    19, 20, 21, 22, 23, 26, 27           -- Additional returned books
 );
 
--- Sync book copy status with borrowing records to ensure data consistency
--- This query updates book_copies.status based on the latest borrowing record for each copy
-UPDATE book_copies 
-SET status = CASE 
-    WHEN latest_borrow.return_date IS NULL THEN 'borrowed'
-    ELSE 'available'
-END
-FROM (
-    SELECT DISTINCT ON (copy_id) 
-        copy_id, 
-        return_date,
-        status
-    FROM borrowing_records 
-    ORDER BY copy_id, borrow_date DESC
-) AS latest_borrow
-WHERE book_copies.copy_id = latest_borrow.copy_id;
 -- Set search path to public schema
 SET search_path TO public;
 """
@@ -568,6 +504,7 @@ SET search_path TO public;
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         return False
+
 def reset_database():
     """Complete database reset: clean + initialize"""
     logger.info("=== Starting Complete Database Reset ===")
@@ -587,6 +524,7 @@ def reset_database():
     else:
         logger.error("✗ Database initialization failed")
         return False
+
 if __name__ == "__main__":
     import sys
     

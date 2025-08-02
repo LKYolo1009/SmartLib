@@ -16,7 +16,7 @@ class BorrowCreate(BaseModel):
     """Simplified borrowing creation model"""
     copy_id: int = Field(..., description="Book copy ID", example=1)
     matric_number: str = Field(..., description="Student matriculation number")
-    loan_days: Optional[int] = Field(None, ge=14, le=30, description="Loan period in days (default: 14)", example=14)
+    loan_days: Optional[int] = Field(None, ge=1, le=30, description="Loan period in days (default: 14)", example=14)
 
 
 class BorrowResponse(BaseModel):
@@ -104,7 +104,7 @@ class BorrowingStats(BaseModel):
                 "total_borrowings": 250,
                 "active_borrowings": 45,
                 "overdue_borrowings": 12,
-                "average_days_kept": 18.5,
+                "average_days_kept": 14.2,
                 "most_borrowed_books": [
                     {
                         "book_id": 1,

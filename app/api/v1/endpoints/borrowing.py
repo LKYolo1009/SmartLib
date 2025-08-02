@@ -202,7 +202,7 @@ def get_active_borrowings(
         "total_count": total_count,
         "returned_count": total_count - len(active_borrowings),
         "overdue_count": overdue_count,
-        "borrowings": active_borrowings  # 直接返回 active_borrowings，因为它应该已经是正确的格式
+        "borrowings": active_borrowings  
     }
 
 @router.get("/student/{identifier}/due-soon", response_model=List[BorrowDetail])

@@ -13,7 +13,7 @@ import logging
 
 api_router = APIRouter()
 
-# 传统REST API路由
+
 api_router.include_router(book.router, prefix="/api/v1/book", tags=["Books"])
 api_router.include_router(book_copy.router, prefix="/api/v1/book_copies", tags=["Book Copies"])
 api_router.include_router(borrowing.router, prefix="/api/v1/borrowing", tags=["Borrowing"])
@@ -22,11 +22,9 @@ api_router.include_router(metadata.router, prefix="/api/v1/metadata", tags=["Met
 api_router.include_router(statistics.router, prefix="/api/v1/statistics", tags=["Statistics"])
 api_router.include_router(health.router, prefix="/api/v1/health", tags=["Health"])
 
-# 智能自然语言查询路由
-api_router.include_router(nlu_routes, tags=["Natural Language Understanding"])
-api_router.include_router(smart_query.router, tags=["Smart Query"])
 
-# LLM增强的智能查询路由 (需要本地Llama3.2)
-api_router.include_router(llm_smart_query.router, tags=["LLM Enhanced Query"])
+# api_router.include_router(nlu_routes, tags=["Natural Language Understanding"])
+# api_router.include_router(smart_query.router, tags=["Smart Query"])
+# api_router.include_router(llm_smart_query.router, tags=["LLM Enhanced Query"])
 
 logging.basicConfig(level=logging.INFO)
