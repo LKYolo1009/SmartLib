@@ -355,7 +355,8 @@ INSERT INTO students (matric_number, full_name, email, status, telegram_id) VALU
     ('A8899001T', 'Ava Martinez', 'ava.m@u.nus.edu', 'active', '889900112'),
     ('A9900112U', 'Lucas Wang', 'lucas.w@u.nus.edu', 'active', '990011223'),
     ('A0011223V', 'Ruofan Xu', 'ruofan.x@u.nus.edu', 'active', '6640904968'),
-    ('A0012345X', 'Jing Han', 'han_jing@u.nus.edu', 'active', '883061077');
+    ('A0012345X', 'Jing Han', 'han_jing@u.nus.edu', 'active', '883061077'),
+    ('A6666666A', 'Selvia T', 'selvia_t@u.nus.edu', 'active', '962442060');
 
 -- Insert books
 INSERT INTO books (isbn, title, call_number, author_id, publisher_id, publication_year, language_code, category_id) VALUES
