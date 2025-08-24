@@ -6,11 +6,8 @@ from pathlib import Path
 import logging
 from datetime import datetime, timedelta, timezone
 
-# Add project root to Python path
 ROOT_DIR = Path(__file__).parent.parent
 sys.path.append(str(ROOT_DIR))
-
-# Now we can import from app
 from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +66,9 @@ def init_db():
         sql_script = r"""
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Set timezone to UTC for consistency
+SET timezone = 'UTC';
 
 -- Drop existing enum types if they exist
 DROP TYPE IF EXISTS book_status CASCADE;
@@ -429,54 +429,52 @@ INSERT INTO book_copies (book_id, acquisition_type, acquisition_date, price, con
 -- Insert borrowing records (simplified with no duplicate copy_id usage)
 INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, return_date, status) VALUES
     -- Regular returned books (mostly 14 days default, some custom periods)
-    (1, 'A1234567B', '2025-04-05', '2025-04-19', '2025-04-17', 'returned'),  -- 14 days, returned early
-    (2, 'A2345678C', '2025-04-12', '2025-04-26', '2025-04-24', 'returned'),  -- 14 days, returned early
-    (3, 'A3456789D', '2025-04-13', '2025-04-20', '2025-04-20', 'returned'),  -- 7 days, returned on time
-    (4, 'A4567890E', '2025-04-14', '2025-04-28', '2025-04-28', 'returned'),  -- 14 days, returned on time
-    (5, 'A5678901F', '2025-04-15', '2025-05-15', '2025-05-10', 'returned'), -- 30 days, returned early
-    (6, 'A6789012G', '2025-04-16', '2025-04-30', '2025-04-30', 'returned'),  -- 14 days, returned on time
-    (7, 'A7890123H', '2025-04-17', '2025-05-01', '2025-05-01', 'returned'),  -- 14 days, returned on time
-    (8, 'A8901234J', '2025-04-18', '2025-05-18', '2025-05-15', 'returned'), -- 30 days, returned early
-    (9, 'A0123456L', '2025-04-19', '2025-05-03', '2025-05-03', 'returned'),  -- 14 days, returned on time
-    (10, 'A9012345K', '2025-04-20', '2025-05-04', '2025-05-04', 'returned'),  -- 14 days, returned on time
+    (1, 'A1234567B', '2025-04-05 00:00:00+00:00', '2025-04-19 00:00:00+00:00', '2025-04-17 00:00:00+00:00', 'returned'),  -- 14 days, returned early
+    (2, 'A2345678C', '2025-04-12 00:00:00+00:00', '2025-04-26 00:00:00+00:00', '2025-04-24 00:00:00+00:00', 'returned'),  -- 14 days, returned early
+    (3, 'A3456789D', '2025-04-13 00:00:00+00:00', '2025-04-20 00:00:00+00:00', '2025-04-20 00:00:00+00:00', 'returned'),  -- 7 days, returned on time
+    (4, 'A4567890E', '2025-04-14 00:00:00+00:00', '2025-04-28 00:00:00+00:00', '2025-04-28 00:00:00+00:00', 'returned'),  -- 14 days, returned on time
+    (5, 'A5678901F', '2025-04-15 00:00:00+00:00', '2025-05-15 00:00:00+00:00', '2025-05-10 00:00:00+00:00', 'returned'), -- 30 days, returned early
+    (6, 'A6789012G', '2025-04-16 00:00:00+00:00', '2025-04-30 00:00:00+00:00', '2025-04-30 00:00:00+00:00', 'returned'),  -- 14 days, returned on time
+    (7, 'A7890123H', '2025-04-17 00:00:00+00:00', '2025-05-01 00:00:00+00:00', '2025-05-01 00:00:00+00:00', 'returned'),  -- 14 days, returned on time
+    (8, 'A8901234J', '2025-04-18 00:00:00+00:00', '2025-05-18 00:00:00+00:00', '2025-05-15 00:00:00+00:00', 'returned'), -- 30 days, returned early
+    (9, 'A0123456L', '2025-04-19 00:00:00+00:00', '2025-05-03 00:00:00+00:00', '2025-05-03 00:00:00+00:00', 'returned'),  -- 14 days, returned on time
+    (10, 'A9012345K', '2025-04-20 00:00:00+00:00', '2025-05-04 00:00:00+00:00', '2025-05-04 00:00:00+00:00', 'returned'),  -- 14 days, returned on time
 
     -- Currently borrowed books (mostly 14 days default, some custom periods)
-    (11, 'A1122334M', '2025-05-01', '2025-05-15', NULL, 'borrowed'),       -- 14 days
-    (12, 'A2233445N', '2025-05-02', '2025-05-16', NULL, 'borrowed'),       -- 14 days
-    (13, 'A3344556O', '2025-05-03', '2025-05-10', NULL, 'borrowed'),       -- 7 days
-    (14, 'A4455667P', '2025-05-04', '2025-06-03', NULL, 'borrowed'),       -- 30 days
-    (15, 'A5566778Q', '2025-05-05', '2025-05-19', NULL, 'borrowed'),       -- 14 days
-    (16, 'A0011223V', '2025-08-11', '2025-08-25', NULL, 'borrowed'),       -- 14 days, due soon
+    (11, 'A1122334M', '2025-05-01 00:00:00+00:00', '2025-05-15 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days
+    (12, 'A2233445N', '2025-05-02 00:00:00+00:00', '2025-05-16 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days
+    (13, 'A3344556O', '2025-05-03 00:00:00+00:00', '2025-05-10 00:00:00+00:00', NULL, 'borrowed'),       -- 7 days
+    (14, 'A4455667P', '2025-05-04 00:00:00+00:00', '2025-06-03 00:00:00+00:00', NULL, 'borrowed'),       -- 30 days
+    (15, 'A5566778Q', '2025-05-05 00:00:00+00:00', '2025-05-19 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days
 
     -- Overdue books (mostly 14 days default, some custom periods)
-    (16, 'A6677889R', '2025-04-20', '2025-05-04', NULL, 'borrowed'),       -- 14 days, overdue
-    (17, 'A7788990S', '2025-04-25', '2025-05-09', NULL, 'borrowed'),       -- 14 days, overdue
-    (18, 'A8899001T', '2025-04-28', '2025-05-05', NULL, 'borrowed'),       -- 7 days, overdue
+    (16, 'A6677889R', '2025-04-20 00:00:00+00:00', '2025-05-04 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days, overdue
+    (17, 'A7788990S', '2025-04-25 00:00:00+00:00', '2025-05-09 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days, overdue
+    (18, 'A8899001T', '2025-04-28 00:00:00+00:00', '2025-05-05 00:00:00+00:00', NULL, 'borrowed'),       -- 7 days, overdue
 
     -- More returned books (mostly 14 days default)
-    (19, 'A9900112U', '2025-04-15', '2025-04-29', '2025-04-29', 'returned'), -- 14 days, returned on time
-    (20, 'A0011223V', '2025-04-20', '2025-05-20', '2025-05-18', 'returned'), -- 30 days, returned early
+    (19, 'A9900112U', '2025-04-15 00:00:00+00:00', '2025-04-29 00:00:00+00:00', '2025-04-29 00:00:00+00:00', 'returned'), -- 14 days, returned on time
+    (20, 'A0011223V', '2025-04-20 00:00:00+00:00', '2025-05-20 00:00:00+00:00', '2025-05-18 00:00:00+00:00', 'returned'), -- 30 days, returned early
 
     -- Overdue and returned late (mostly 14 days default)
-    (21, 'A1234567B', '2025-04-01', '2025-04-15', '2025-04-19', 'returned'), -- 14 days, returned 4 days late
-    (22, 'A2345678C', '2025-04-05', '2025-04-19', '2025-04-25', 'returned'), -- 14 days, returned 6 days late
-    (23, 'A3456789D', '2025-04-10', '2025-04-17', '2025-04-22', 'returned'), -- 7 days, returned 5 days late
+    (21, 'A1234567B', '2025-04-01 00:00:00+00:00', '2025-04-15 00:00:00+00:00', '2025-04-19 00:00:00+00:00', 'returned'), -- 14 days, returned 4 days late
+    (22, 'A2345678C', '2025-04-05 00:00:00+00:00', '2025-04-19 00:00:00+00:00', '2025-04-25 00:00:00+00:00', 'returned'), -- 14 days, returned 6 days late
+    (23, 'A3456789D', '2025-04-10 00:00:00+00:00', '2025-04-17 00:00:00+00:00', '2025-04-22 00:00:00+00:00', 'returned'), -- 7 days, returned 5 days late
 
     -- Severely overdue (mostly 14 days default)
-    (24, 'A4567890E', '2025-04-15', '2025-04-29', NULL, 'borrowed'),       -- 14 days, severely overdue
-    (25, 'A5678901F', '2025-04-20', '2025-05-20', NULL, 'borrowed'),       -- 30 days, severely overdue
+    (24, 'A4567890E', '2025-04-15 00:00:00+00:00', '2025-04-29 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days, severely overdue
+    (25, 'A5678901F', '2025-04-20 00:00:00+00:00', '2025-05-20 00:00:00+00:00', NULL, 'borrowed'),       -- 30 days, severely overdue
 
     -- Extended and returned on time (mostly 14 days default)
-    (26, 'A6789012G', '2025-04-01', '2025-04-15', '2025-04-29', 'returned'), -- 14 days, extended and returned
-    (27, 'A7890123H', '2025-04-05', '2025-04-19', '2025-05-02', 'returned'), -- 14 days, extended and returned
+    (26, 'A6789012G', '2025-04-01 00:00:00+00:00', '2025-04-15 00:00:00+00:00', '2025-04-29 00:00:00+00:00', 'returned'), -- 14 days, extended and returned
+    (27, 'A7890123H', '2025-04-05 00:00:00+00:00', '2025-04-19 00:00:00+00:00', '2025-05-02 00:00:00+00:00', 'returned'), -- 14 days, extended and returned
 
     -- Extended and still borrowed (mostly 14 days default)
-    (28, 'A8901234J', '2025-04-15', '2025-04-29', NULL, 'borrowed'),       -- 14 days, extended
-    (29, 'A9012345K', '2025-04-20', '2025-05-20', NULL, 'borrowed'),       -- 30 days, extended
+    (28, 'A8901234J', '2025-04-15 00:00:00+00:00', '2025-04-29 00:00:00+00:00', NULL, 'borrowed'),       -- 14 days, extended
+    (29, 'A9012345K', '2025-04-20 00:00:00+00:00', '2025-05-20 00:00:00+00:00', NULL, 'borrowed'),       -- 30 days, extended
 
     -- Extended but overdue (mostly 14 days default)
-    (30, 'A0123456L', '2025-04-25', '2025-05-09', NULL, 'borrowed'),       -- 14 days, extended but overdue
-    (19, 'A0011223V', '2025-07-10', '2025-07-24', NULL, 'borrowed');       -- 14 days, extended but overdue
+    (30, 'A0123456L', '2025-04-25 00:00:00+00:00', '2025-05-09 00:00:00+00:00', NULL, 'borrowed');       -- 14 days, extended but overdue
 
 -- Update book copy status to match borrowing records
 UPDATE book_copies SET status = 'borrowed' WHERE copy_id IN (
