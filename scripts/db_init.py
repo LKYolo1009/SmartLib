@@ -6,11 +6,8 @@ from pathlib import Path
 import logging
 from datetime import datetime, timedelta, timezone
 
-# Add project root to Python path
 ROOT_DIR = Path(__file__).parent.parent
 sys.path.append(str(ROOT_DIR))
-
-# Now we can import from app
 from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
