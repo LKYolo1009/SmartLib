@@ -446,6 +446,7 @@ INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, re
     (13, 'A3344556O', '2025-05-03', '2025-05-10', NULL, 'borrowed'),       -- 7 days
     (14, 'A4455667P', '2025-05-04', '2025-06-03', NULL, 'borrowed'),       -- 30 days
     (15, 'A5566778Q', '2025-05-05', '2025-05-19', NULL, 'borrowed'),       -- 14 days
+    (16, 'A0011223V', '2025-08-11', '2025-08-25', NULL, 'borrowed'),       -- 14 days, due soon
 
     -- Overdue books (mostly 14 days default, some custom periods)
     (16, 'A6677889R', '2025-04-20', '2025-05-04', NULL, 'borrowed'),       -- 14 days, overdue
@@ -474,7 +475,8 @@ INSERT INTO borrowing_records (copy_id, matric_number, borrow_date, due_date, re
     (29, 'A9012345K', '2025-04-20', '2025-05-20', NULL, 'borrowed'),       -- 30 days, extended
 
     -- Extended but overdue (mostly 14 days default)
-    (30, 'A0123456L', '2025-04-25', '2025-05-09', NULL, 'borrowed');       -- 14 days, extended but overdue
+    (30, 'A0123456L', '2025-04-25', '2025-05-09', NULL, 'borrowed'),       -- 14 days, extended but overdue
+    (19, 'A0011223V', '2025-07-10', '2025-07-24', NULL, 'borrowed');       -- 14 days, extended but overdue
 
 -- Update book copy status to match borrowing records
 UPDATE book_copies SET status = 'borrowed' WHERE copy_id IN (
