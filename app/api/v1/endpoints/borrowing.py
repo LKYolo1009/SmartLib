@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from app.db.session import get_db
 from app.crud.borrowing import borrowing_crud
@@ -114,7 +114,7 @@ def get_overdue_borrowings(
     db: Session = Depends(get_db),
 ):
     """Get overdue borrowing records"""
-    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now = datetime.now().replace(microsecond=0)
     due_date_threshold = None
     if days_overdue is not None:
         due_date_threshold = now - timedelta(days=days_overdue)
@@ -194,7 +194,7 @@ def get_active_borrowings(
     )
     
     # Calculate overdue count
-    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now = datetime.now().replace(microsecond=0)
     overdue_count = sum(1 for b in active_borrowings if b.due_date < now)
     
     # Return formatted response
@@ -244,7 +244,7 @@ def get_student_overdue_borrowings(
         skip: Number of records to skip
         limit: Maximum number of records to return
     """
-    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now = datetime.now().replace(microsecond=0)
     due_date_threshold = None
     if days_overdue is not None:
         due_date_threshold = now - timedelta(days=days_overdue)
