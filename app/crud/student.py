@@ -124,7 +124,8 @@ class CRUDStudent(CRUDBase[Student, StudentCreate, StudentUpdate]):
             matric_number=obj_in.matric_number,
             full_name=obj_in.full_name,
             email=obj_in.email,
-            status=obj_in.status
+            status=obj_in.status,
+            telegram_id=obj_in.telegram_id
         )
         db.add(db_obj)
         db.commit()
