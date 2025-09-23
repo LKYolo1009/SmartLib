@@ -205,7 +205,7 @@ with st.sidebar:
 # Main header
 st.markdown("""
 <div class="main-header">
-    <h1>📚 Library Management Dashboard</h1>
+    <h1>📚 Library Data Dashboard</h1>
     <p>Tembusu Library Operations Analytics Platform</p>
 </div>
 """, unsafe_allow_html=True)
