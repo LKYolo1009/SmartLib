@@ -22,6 +22,9 @@ ENDPOINTS = {
     "copies": f"{API_BASE_URL}/api/v1/book_copies/?limit=9999",
     "books": f"{API_BASE_URL}/api/v1/book/?limit=9999",
     "metadata/locations": f"{API_BASE_URL}/api/v1/metadata/locations",
+    "create_book": f"{API_BASE_URL}/api/v1/book/",
+    "create_book_copy": f"{API_BASE_URL}/api/v1/book_copies/",
+    "author": f"{API_BASE_URL}api/v1/metadata/authors/?skip=0&limit=100",
 }
 
 # 🎨 现代化配色方案 - 基于 Tailwind CSS 色彩系统

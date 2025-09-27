@@ -71,15 +71,15 @@ class APIClient:
         url = f"{self.base_url}{endpoint}"
         return requests.get(url)
         
-    def post(self, endpoint, data=None):
+    def post(self, endpoint, json=None):
         """发送POST请求"""
         url = f"{self.base_url}{endpoint}"
-        return requests.post(url, json=data)
+        return requests.post(url, json=json)
         
-    def put(self, endpoint, data=None):
+    def put(self, endpoint, json=None):
         """发送PUT请求"""
         url = f"{self.base_url}{endpoint}"
-        return requests.put(url, json=data)
+        return requests.put(url, json=json)
         
     def delete(self, endpoint):
         """发送DELETE请求"""
@@ -341,6 +341,127 @@ class APIClient:
             logger.error(f"Error in get_book_copy_labels: {e}", exc_info=True)
             st.error("❌ Failed to fetch book label data from API.")
             return []
+    
+    @staticmethod
+    def get_all_book_details():
+        """Fetch book copy data and enrich with book metadata"""
+        try:
+            copies_url = ENDPOINTS["copies"]
+            books_url = ENDPOINTS["books"]
+
+            # Fetch data
+            copies_response = requests.get(copies_url)
+            books_response = requests.get(books_url)
+            copies_response.raise_for_status()
+            books_response.raise_for_status()
+
+            copies = copies_response.json()
+            books = books_response.json()
+
+            # Build book_id → metadata map
+            book_map = {
+                b["book_id"]: {
+                    "title": b.get("title", ""),
+                    "isbn": b.get("isbn", ""),
+                    "call_number": b.get("call_number", ""),
+                    "author_name": b.get("author_name", ""),
+                    "publisher_name": b.get("publisher_name", ""),
+                    "publication_year": b.get("publication_year", 0),
+                    "language_name": b.get("language_name", ""),
+                    "category_name": b.get("category_name", ""),
+                    "total_copies": b.get("total_copies", 0)
+                }
+                for b in books
+            }
+
+            # Enrich copies with required metadata
+            result = []
+            for c in copies:
+                book_meta = book_map.get(c["book_id"], {
+                    "title": "",
+                    "isbn": "",
+                    "call_number": "",
+                    "author_name": "",
+                    "publisher_name": "",
+                    "publication_year": 0,
+                    "language_name": "",
+                    "category_name": "",
+                    "total_copies": 0
+                })
+                result.append({
+                    "id": c["copy_id"],  # Using copy_id as unique identifier
+                    "title": book_meta["title"],
+                    "isbn": book_meta["isbn"],
+                    "call_number": book_meta["call_number"],
+                    "author_name": book_meta["author_name"],
+                    "publisher_name": book_meta["publisher_name"],
+                    "publication_year": book_meta["publication_year"],
+                    "language": book_meta["language_name"],
+                    "category": book_meta["category_name"],
+                    "total_copy": book_meta["total_copies"],
+                    "acquisition_type": c.get("acquisition_type", ""),
+                    "acquisition_date": c.get("acquisition_date", ""),
+                    "price": c.get("price", 0.0),
+                    "condition": c.get("condition", ""),
+                    "book_location": c.get("location_name", "")
+                })
+
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_all_book_details: {e}", exc_info=True)
+            st.error("❌ Failed to fetch book data from API.")
+            return []
+        
+
+    # Function to add a new book and its copies
+    @staticmethod
+    def add_new_book_details():
+        """Add a new book and its specified number of copies"""
+        try:
+            # Extract form data from session state
+            form_data = st.session_state.add_form
+            book_data = {
+                "author_id": 1,  # Placeholder, replace with dynamic author_id (e.g., from a dropdown)
+                "call_number": form_data['call_number'],
+                "category_id": 1,  # Placeholder, replace with dynamic category_id
+                "initial_copies": form_data['total_copy'],  # Number of copies to create
+                "isbn": form_data['isbn'],
+                "language_code": form_data['language'].upper()[:2] if form_data['language'] else "EN",  # 2-letter code
+                "publication_year": form_data['publication_year'],
+                "publisher_id": 1,  # Placeholder, replace with dynamic publisher_id
+                "title": form_data['title']
+            }
+
+            # Create the book
+            response = APIClient.post(ENDPOINTS["create_book"], json=book_data)
+            if response.status_code != 201:
+                st.error(f"Failed to create book: {response.text}")
+                return False
+            book = response.json()
+            book_id = book.get("book_id")
+
+            # Create copies based on initial_copies
+            copy_data_template = {
+                "book_id": book_id,
+                "acquisition_type": form_data['acquisition_type'],
+                "acquisition_date": str(form_data['acquisition_date']),
+                "price": form_data['price'],
+                "condition": form_data['condition'],
+                "status": "available",  # Default status
+                "location_id": 1,  # Placeholder, replace with dynamic location_id
+                "notes": form_data['book_location']  # Using book_location as notes
+            }
+            for _ in range(form_data['total_copy']):
+                response = APIClient.post(ENDPOINTS["create_book_copy"], json=copy_data_template)
+                if response.status_code != 201:
+                    st.error(f"Failed to create copy: {response.text}")
+                    return False
+
+            st.success(f"Book and {form_data['total_copy']} copies added successfully")
+            return True
+        except Exception as e:
+            st.error(f"Error adding book and copies: {e}")
+            return False
 
 
 # Standalone functions for backward compatibility
