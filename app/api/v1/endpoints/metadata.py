@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -7,12 +7,12 @@ from app.crud.author import author_crud
 from app.crud.category import category_crud
 from app.crud.publisher import publisher_crud
 from app.crud.language import language_crud
-from app.crud.book_location import book_location_crud
 from app.schemas.author import AuthorCreate, AuthorResponse, AuthorUpdate
 from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.schemas.publisher import PublisherCreate, PublisherResponse, PublisherUpdate
 from app.schemas.language import LanguageCreate, LanguageResponse, LanguageUpdate
-from app.schemas.book_location import BookLocationResponse
+from app.crud.book_location import book_location_crud
+from app.schemas.book_location import BookLocationResponse, BookLocationCreate
 
 router = APIRouter()
 import logging
@@ -38,6 +38,18 @@ def get_authors(
     """
     return author_crud.get_multi(db, skip=skip, limit=limit)
 
+@router.get("/authors/search", response_model=Optional[AuthorResponse], tags=["Metadata"])
+def search_author_by_name(
+    *,
+    db: Session = Depends(get_db),
+    name: str = Query(..., description="Author name to search for")
+):
+    """
+    Search for an author by name.
+    Returns the author if found, None if not found.
+    """
+    return author_crud.get_by_name(db, author_name=name)
+
 @router.post("/authors/", response_model=AuthorResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
 def create_author(
     *,
@@ -48,8 +60,6 @@ def create_author(
     Create a new author.
     """
     return author_crud.create(db=db, obj_in=author_in)
-
-
 
 @router.get("/authors/{author_id}", response_model=AuthorResponse, tags=["Metadata"])
 def get_author(
@@ -103,6 +113,18 @@ def get_categories(
     if main_only:
         return category_crud.get_main_categories(db)
     return category_crud.get_multi(db, skip=skip, limit=limit)
+
+@router.get("/categories/search", response_model=Optional[CategoryResponse], tags=["Metadata"])
+def search_category_by_name(
+    *,
+    db: Session = Depends(get_db),
+    name: str = Query(..., description="Category name to search for")
+):
+    """
+    Search for a category by name.
+    Returns the category if found, None if not found.
+    """
+    return category_crud.get_by_name(db, category_name=name)
 
 @router.get("/categories/{category_id}/subcategories", response_model=List[CategoryResponse], tags=["Metadata"])
 def get_subcategories(
@@ -214,6 +236,18 @@ def create_publisher(
         publisher_id=new_id
     )
 
+@router.get("/publishers/search", response_model=Optional[PublisherResponse], tags=["Metadata"])
+def search_publisher_by_name(
+    *,
+    db: Session = Depends(get_db),
+    name: str = Query(..., description="Publisher name to search for")
+):
+    """
+    Search for a publisher by name.
+    Returns the publisher if found, None if not found.
+    """
+    return publisher_crud.get_by_name(db, name=name)
+
 # Location endpoints
 @router.get("/locations", response_model=List[BookLocationResponse], tags=["Metadata"])
 def get_locations(
@@ -221,17 +255,17 @@ def get_locations(
     skip: int = 0,
     limit: int = 100,
 ):
-    """
-    Retrieve a list of all book locations with their QR codes.
-    
-    Returns all locations in the library with their:
-    - Location ID
-    - Location name
-    - Location description
-    - Location QR code
-    - Creation and update timestamps
-    """
     return book_location_crud.get_multi(db, skip=skip, limit=limit)
+
+
+@router.get("/locations/search", response_model=Optional[BookLocationResponse], tags=["Metadata"])
+def search_location_by_name(
+    *,
+    db: Session = Depends(get_db),
+    name: str = Query(..., description="Location name to search for"),
+):
+    return book_location_crud.get_by_name(db, location_name=name)
+
 
 @router.get("/locations/{location_id}", response_model=BookLocationResponse, tags=["Metadata"])
 def get_location(
@@ -239,18 +273,11 @@ def get_location(
     db: Session = Depends(get_db),
     location_id: int,
 ):
-    """
-    Retrieve detailed information about a specific location.
-    
-    - **location_id**: Location ID
-    """
     db_location = book_location_crud.get(db, location_id=location_id)
     if not db_location:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Location not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Location not found")
     return db_location
+
 
 @router.get("/locations/location-qr-code/{location_qr_code}", response_model=BookLocationResponse, tags=["Metadata"])
 def get_location_by_qr_code(
@@ -258,15 +285,19 @@ def get_location_by_qr_code(
     db: Session = Depends(get_db),
     location_qr_code: str,
 ):
-    """
-    Retrieve location information by its location QR code.
-    
-    - **location_qr_code**: Location QR code
-    """
     db_location = book_location_crud.get_by_location_qr_code(db, location_qr_code=location_qr_code)
     if not db_location:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Location not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Location not found")
     return db_location
+
+
+@router.post("/locations", response_model=BookLocationResponse, status_code=status.HTTP_201_CREATED, tags=["Metadata"])
+def create_location(
+    *,
+    db: Session = Depends(get_db),
+    location_in: BookLocationCreate,
+):
+    existing = book_location_crud.get_by_name(db, location_name=location_in.location_name)
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Location with this name already exists")
+    return book_location_crud.create(db=db, obj_in=location_in)

@@ -14,6 +14,10 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
     def get_by_code(self, db: Session, category_code: str) -> Optional[Category]:
         return db.query(Category).filter(Category.category_code == category_code).first()
     
+    def get_by_name(self, db: Session, category_name: str) -> Optional[Category]:
+        """Get category by name"""
+        return db.query(Category).filter(Category.category_name == category_name).first()
+    
     def get_multi(
         self, db: Session, *, skip: int = 0, limit: int = 100
     ) -> List[Category]:
