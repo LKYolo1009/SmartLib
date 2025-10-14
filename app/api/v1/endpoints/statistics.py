@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 from datetime import datetime, timedelta, timezone
 import logging
 
-# 配置日志
+# Configure logger
 logger = logging.getLogger(__name__)
 
 from app.db.session import get_db
@@ -53,9 +53,37 @@ def get_student_stats(db: Session = Depends(get_db)):
     return crud_stats.get_student_stats(db)
 
 @router.get("/kpi", response_model=KPIMetrics)
-def get_kpi_metrics(db: Session = Depends(get_db)):
-    """Get KPI metrics"""
-    return crud_stats.get_kpi_metrics(db)
+def get_kpi_metrics(
+    start_date: Optional[datetime] = Query(default=None),
+    end_date: Optional[datetime] = Query(default=None),
+    db: Session = Depends(get_db)
+):
+    """Get KPI metrics (supports optional start_date/end_date for period-aware KPIs)."""
+    try:
+        if start_date and end_date:
+            # Ensure timezone awareness
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=timezone.utc)
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+            if start_date > end_date:
+                raise HTTPException(status_code=400, detail="Start date must be before end date")
+            if (end_date - start_date).days > 365:
+                raise HTTPException(status_code=400, detail="Date range cannot exceed one year")
+            # Prevent future query
+            now = datetime.now(timezone.utc)
+            if start_date > now or end_date > now:
+                raise HTTPException(status_code=400, detail="Cannot query future dates")
+        else:
+            start_date = None
+            end_date = None
+
+        return crud_stats.get_kpi_metrics(db, start_date, end_date)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in KPI endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/popular-books", response_model=List[PopularBooks])
 def get_popular_books(
@@ -108,41 +136,41 @@ def get_borrowing_trends(
 ):
     """Get borrowing trends over time"""
     try:
-        # 设置默认日期范围
+        # Set default date range
         if not start_date:
             start_date = datetime.now(timezone.utc) - timedelta(days=90)
         if not end_date:
             end_date = datetime.now(timezone.utc)
         
-        # 确保日期有时区信息
+        # Ensure datetime values are timezone-aware
         if start_date.tzinfo is None:
             start_date = start_date.replace(tzinfo=timezone.utc)
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
         
-        # 验证日期范围
+        # Validate date range
         if start_date > end_date:
             raise HTTPException(
                 status_code=400,
                 detail="Start date must be before end date"
             )
         
-        # 验证日期范围不超过一年
+        # Validate the date range does not exceed one year
         if (end_date - start_date).days > 365:
             raise HTTPException(
                 status_code=400,
                 detail="Date range cannot exceed one year"
             )
         
-        # 确保日期不是未来时间
+        # Ensure dates are not in the future
         now = datetime.now(timezone.utc)
         if start_date > now or end_date > now:
-            raise HTTPException(status_code=400, detail="不能查询未来日期的数据")
+            raise HTTPException(status_code=400, detail="Cannot query future dates")
         
-        # 获取数据
+        # Fetch data
         result = crud_stats.get_borrowing_trends(db, start_date, end_date, interval)
         
-        # 如果没有数据，返回空结果
+        # Return empty result when no data is found
         if not result:
             return BorrowingTrend(
                 time_period=interval,
@@ -157,7 +185,7 @@ def get_borrowing_trends(
         
     except Exception as e:
         logger.error(f"Error in borrowing-trends endpoint: {str(e)}", exc_info=True)
-        # 根据错误类型返回不同的错误信息
+        # Return different error messages based on error type
         if "timezone" in str(e).lower():
             raise HTTPException(status_code=400, detail="Invalid timezone information")
         elif "interval" in str(e).lower():

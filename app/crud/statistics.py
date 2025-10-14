@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, distinct, case, desc
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict
+from typing import List, Dict, Optional
 import logging
 
 # 配置日志
@@ -187,47 +187,99 @@ def get_student_stats(db: Session) -> List[StudentStats]:
         for stat in stats
     ]
 
-def get_kpi_metrics(db: Session) -> KPIMetrics:
-    """Get KPI metrics"""
+def get_kpi_metrics(db: Session, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> KPIMetrics:
+    """Get KPI metrics.
+
+    If a time window is provided, compute period-aware rates while keeping global totals:
+    - total_books, total_students: global snapshot
+    - active_borrows: number of borrows that started within the period
+    - overdue_books: number of borrowings whose due_date falls in the period and are overdue at query time
+    - average_borrow_duration: average duration for returns completed within the period
+    - return_rate: returns completed within the period / borrows started within the period
+    """
     total_books = db.query(func.count(Book.book_id)).scalar()
     total_students = db.query(func.count(Student.matric_number)).scalar()
-    
-    active_borrows = db.query(func.count(BorrowingRecord.borrow_id)).filter(
-        and_(
-            BorrowingRecord.return_date.is_(None),
-            BorrowingRecord.status == 'borrowed'
-        )
-    ).scalar()
-    
-    overdue_books = db.query(func.count(BorrowingRecord.borrow_id)).filter(
-        and_(
-            BorrowingRecord.return_date.is_(None),
-            BorrowingRecord.due_date < datetime.now(timezone.utc),
-            BorrowingRecord.status == 'borrowed'
-        )
-    ).scalar()
 
-    # Calculate average borrow duration
-    avg_duration = db.query(
-        func.avg(
-            func.extract('epoch', BorrowingRecord.return_date - BorrowingRecord.borrow_date) / 86400
-        )
-    ).filter(
-        BorrowingRecord.return_date.isnot(None)
-    ).scalar() or 0
+    now_utc = datetime.now(timezone.utc)
 
-    # Calculate return rate
-    total_borrows = db.query(func.count(BorrowingRecord.borrow_id)).scalar()
-    total_returns = db.query(func.count(BorrowingRecord.borrow_id)).filter(
-        BorrowingRecord.return_date.isnot(None)
-    ).scalar()
-    return_rate = (total_returns / total_borrows * 100) if total_borrows > 0 else 0
+    if start_date is None or end_date is None:
+        # Legacy/global snapshot behavior
+        active_borrows = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            and_(
+                BorrowingRecord.return_date.is_(None),
+                BorrowingRecord.status == 'borrowed'
+            )
+        ).scalar()
+
+        overdue_books = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            and_(
+                BorrowingRecord.return_date.is_(None),
+                BorrowingRecord.due_date < now_utc,
+                BorrowingRecord.status == 'borrowed'
+            )
+        ).scalar()
+
+        avg_duration = db.query(
+            func.avg(
+                func.extract('epoch', BorrowingRecord.return_date - BorrowingRecord.borrow_date) / 86400
+            )
+        ).filter(
+            BorrowingRecord.return_date.isnot(None)
+        ).scalar() or 0
+
+        total_borrows = db.query(func.count(BorrowingRecord.borrow_id)).scalar()
+        total_returns = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            BorrowingRecord.return_date.isnot(None)
+        ).scalar()
+        return_rate = (total_returns / total_borrows * 100) if total_borrows > 0 else 0
+    else:
+        # Ensure timezone awareness
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        # Period-aware counts
+        active_borrows = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            BorrowingRecord.borrow_date.between(start_date, end_date)
+        ).scalar()
+
+        overdue_books = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            and_(
+                BorrowingRecord.due_date.between(start_date, end_date),
+                BorrowingRecord.due_date < now_utc,
+                BorrowingRecord.return_date.is_(None),
+                BorrowingRecord.status == 'borrowed'
+            )
+        ).scalar()
+
+        avg_duration = db.query(
+            func.avg(
+                func.extract('epoch', BorrowingRecord.return_date - BorrowingRecord.borrow_date) / 86400
+            )
+        ).filter(
+            and_(
+                BorrowingRecord.return_date.isnot(None),
+                BorrowingRecord.return_date.between(start_date, end_date)
+            )
+        ).scalar() or 0
+
+        period_borrows = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            BorrowingRecord.borrow_date.between(start_date, end_date)
+        ).scalar()
+        period_returns = db.query(func.count(BorrowingRecord.borrow_id)).filter(
+            and_(
+                BorrowingRecord.return_date.isnot(None),
+                BorrowingRecord.return_date.between(start_date, end_date)
+            )
+        ).scalar()
+        return_rate = (period_returns / period_borrows * 100) if period_borrows and period_borrows > 0 else 0
 
     return KPIMetrics(
         total_books=total_books,
         total_students=total_students,
-        active_borrows=active_borrows,
-        overdue_books=overdue_books,
+        active_borrows=active_borrows or 0,
+        overdue_books=overdue_books or 0,
         average_borrow_duration=float(avg_duration),
         return_rate=float(return_rate)
     )
