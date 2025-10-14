@@ -83,35 +83,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_cached_data():
+def get_cached_data(start_dt: datetime, end_dt: datetime, date_range_label: str):
     """Get all dashboard data in one go to reduce API calls"""
     try:
         logger.debug("Fetching dashboard data")
-        # Get all data
-        kpi_data = APIClient.get_kpi_metrics()
+        # Get all data (period-aware)
+        kpi_data = APIClient.get_kpi_metrics(start_date=start_dt, end_date=end_dt)
         logger.debug(f"KPI data: {kpi_data}")
         
-        # Select time range based on date range
-        if date_range == "Last 7 Days":
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=7)
-        elif date_range == "Last 30 Days":
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-        elif date_range == "Last 90 Days":
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=90)
-        else:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)  # 默认30天
-        
-        popular_books = APIClient.get_popular_books(limit=10, start_date=start_date, end_date=end_date)
+        popular_books = APIClient.get_popular_books(limit=10, start_date=start_dt, end_date=end_dt)
         logger.debug(f"Popular books: {popular_books}")
         
         category_stats = APIClient.get_category_stats()
         logger.debug(f"Category stats: {category_stats}")
         
-        student_activity = APIClient.get_student_activity(limit=10, start_date=start_date, end_date=end_date)
+        student_activity = APIClient.get_student_activity(limit=10, start_date=start_dt, end_date=end_dt)
         logger.debug(f"Student activity: {student_activity}")
         
         overdue_analysis = APIClient.get_overdue_analysis()
@@ -160,16 +146,16 @@ with st.sidebar:
                 max_value=datetime.now()
             )
         
-        # 验证日期范围
+        # Validate date range
         if start_date > end_date:
             st.error("⚠️ Start date cannot be later than end date")
             st.stop()
         
-        # 验证日期范围不超过一年
+        # Validate date range does not exceed one year
         if (end_date - start_date).days > 365:
             st.warning("⚠️ Date range exceeds one year. Data may be limited.")
         
-        # 转换为datetime对象
+        # Convert to datetime objects
         start_date = datetime.combine(start_date, datetime.min.time())
         end_date = datetime.combine(end_date, datetime.max.time())
     else:
@@ -183,7 +169,7 @@ with st.sidebar:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
     
-    # 显示选择的日期范围
+    # Display selected date range
     st.info(f"📅 Selected Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     
     # Refresh button
@@ -194,7 +180,7 @@ with st.sidebar:
     # Data status indicator
     st.markdown("---")
     with st.spinner("Checking data status..."):
-        cached_data = get_cached_data()
+        cached_data = get_cached_data(start_date, end_date, date_range)
         if cached_data['success']:
             st.success("✅ Data loaded successfully")
         else:
@@ -211,7 +197,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Load cached data
-cached_data = get_cached_data()
+cached_data = get_cached_data(start_date, end_date, date_range)
 
 if not cached_data['success']:
     st.error("Failed to load dashboard data. Please try refreshing the page.")
@@ -285,13 +271,13 @@ with col1:
             st.error("Start date cannot be later than end date")
             st.stop()
             
-        # ensure the date time is not the future 
+        # Ensure the date time is not the future
         today = datetime.now(timezone.utc).date()
         if start_date.date() > today or end_date.date() > today:
             st.error("Cannot query future dates")
             st.stop()
             
-        # get the trend 
+        # Get the trend
         borrowing_trends = APIClient.get_borrowing_trends(start_date, end_date)
         logger.debug(f"Borrowing trends data: {borrowing_trends}")
         
@@ -354,6 +340,10 @@ with st.expander("⚠️ Overdue Books Details", expanded=False):
         else:
             overdue_df = overdue_books
             
+        # Format due_date as YYMMDD without timezone
+        if not overdue_df.empty and 'due_date' in overdue_df.columns:
+            overdue_df['due_date'] = pd.to_datetime(overdue_df['due_date'], errors='coerce').dt.strftime('%y%m%d')
+
         if not overdue_df.empty:
             st.dataframe(
                 overdue_df,
@@ -402,18 +392,7 @@ with st.expander("📚 Popular Books Details", expanded=False):
     else:
         st.info("No popular books data available")
 
-# Data Quality Summary
-with st.expander("📊 Data Quality Summary", expanded=False):
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("📚 Popular Books Records", len(popular_books) if popular_books else 0)
-    
-    with col2:
-        st.metric("👥 Student Activity Records", len(student_activity) if student_activity else 0)
-    
-    with col3:
-        st.metric("⚠️ Overdue Records", len(overdue_books) if overdue_books else 0)
+# Removed Data Quality Summary section per request
 
 # Footer
 st.markdown("---")

@@ -12,7 +12,7 @@ import sys
 import os
 import logging
 
-# 配置日志
+# Configure logger
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -41,14 +41,18 @@ def fetch_api_data(endpoint: str, params: dict = None) -> dict:
         data = response.json()
         logger.debug(f"Received data: {data}")
         
-        # 确保返回的数据格式正确
+        # Ensure return shape stays faithful; unwrap only if explicit 'data' container is present
         if isinstance(data, list):
             logger.debug(f"Returning list data with {len(data)} items")
             return data
         elif isinstance(data, dict):
-            result = data.get('data', [])
-            logger.debug(f"Returning dict data with {len(result)} items")
-            return result
+            if 'data' in data and isinstance(data['data'], (list, dict)) and len(data.keys()) == 1:
+                payload = data['data']
+                kind = 'list' if isinstance(payload, list) else 'dict'
+                logger.debug(f"Unwrapped dict container with {kind} data")
+                return payload
+            logger.debug("Returning dict data as-is")
+            return data
         logger.warning(f"Unexpected data format: {type(data)}")
         return []
     except requests.exceptions.RequestException as e:
@@ -67,22 +71,22 @@ class APIClient:
     
     # HTTP Methods for instance usage
     def get(self, endpoint):
-        """发送GET请求"""
+        """Send a GET request"""
         url = f"{self.base_url}{endpoint}"
         return requests.get(url)
         
     def post(self, endpoint, json=None):
-        """发送POST请求"""
+        """Send a POST request"""
         url = f"{self.base_url}{endpoint}"
         return requests.post(url, json=json)
         
     def put(self, endpoint, json=None):
-        """发送PUT请求"""
+        """Send a PUT request"""
         url = f"{self.base_url}{endpoint}"
         return requests.put(url, json=json)
         
     def delete(self, endpoint):
-        """发送DELETE请求"""
+        """Send a DELETE request"""
         url = f"{self.base_url}{endpoint}"
         return requests.delete(url)
 
@@ -103,45 +107,169 @@ class APIClient:
             return {}
 
     @staticmethod
-    def get_kpi_metrics() -> Dict:
-        """Get KPI metrics with mock data fallback"""
-        logger.debug("Fetching KPI metrics")
-        data = fetch_api_data("kpi")
-        if not data:
-            logger.warning("Using mock KPI data")
-            return {
-                "total_books": 2500,
-                "books_borrowed": 450,
-                "overdue_books": 23,
-                "active_users": 180,
-                "utilization_rate": 85.2,
-                "new_registrations": 12
+    def get_kpi_metrics(start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Dict:
+        """Get KPI metrics.
+
+        If a period is provided, aggregate period-aware metrics from existing endpoints:
+        - books_borrowed: sum of borrowings in period
+        - active_users: unique_readers from borrowing-trends in period
+        - utilization_rate: average utilization in period
+        - overdue_books: use backend KPI overdue or fallback to current overdue count
+        - total_books: use backend KPI total_books
+        - new_registrations: not tracked yet → 0
+        """
+        try:
+            logger.debug("Fetching KPI baseline")
+            kpi_baseline = fetch_api_data("kpi") or {}
+
+            if not start_date or not end_date:
+                # No period provided → return backend KPI as-is (mapped to expected keys)
+                if kpi_baseline:
+                    mapped = {
+                        "total_books": kpi_baseline.get("total_books", 0),
+                        "books_borrowed": kpi_baseline.get("active_borrows", 0),
+                        "overdue_books": kpi_baseline.get("overdue_books", 0),
+                        "active_users": kpi_baseline.get("total_students", 0),
+                        "utilization_rate": kpi_baseline.get("return_rate", 0.0),
+                        "new_registrations": 0
+                    }
+                    return mapped
+                logger.warning("Using mock KPI data (no baseline)")
+                return {
+                    "total_books": 2500,
+                    "books_borrowed": 450,
+                    "overdue_books": 23,
+                    "active_users": 180,
+                    "utilization_rate": 85.2,
+                    "new_registrations": 12
+                }
+
+            # Period-aware aggregation
+            params_dates = {
+                "start_date": start_date.strftime("%Y-%m-%d"),
+                "end_date": end_date.strftime("%Y-%m-%d")
             }
-        return data
+
+            # Borrowing trends full object for unique_readers
+            trend_full = APIClient.get_api_data("borrowing_trends", {**params_dates, "interval": "day"}) or {}
+            unique_readers = 0
+            if isinstance(trend_full, dict):
+                unique_readers = int(trend_full.get("unique_readers", 0) or 0)
+
+            # Sum borrowings over period using our normalized trends helper
+            trend_series = APIClient.get_borrowing_trends(start_date, end_date)
+            period_borrows = 0
+            if isinstance(trend_series, list) and trend_series:
+                period_borrows = int(sum(max(0, int(item.get("borrowings", 0) or 0)) for item in trend_series))
+
+            # Utilization average
+            util_df = APIClient.get_library_utilization(start_date, end_date)
+            if not util_df.empty:
+                utilization_rate = float(util_df["utilization_rate"].mean())
+            else:
+                utilization_rate = 0.0
+
+            # Overdue count (current overdue not period-bound)
+            overdue_list = fetch_api_data("overdue") or []
+            overdue_count = len(overdue_list) if isinstance(overdue_list, list) else int(kpi_baseline.get("overdue_books", 0) or 0)
+
+            # Total books from baseline
+            total_books = int(kpi_baseline.get("total_books", 0) or 0)
+
+            result = {
+                "total_books": total_books,
+                "books_borrowed": period_borrows,
+                "overdue_books": overdue_count,
+                "active_users": unique_readers,
+                "utilization_rate": utilization_rate,
+                "new_registrations": 0
+            }
+            logger.debug(f"Period KPI computed: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_kpi_metrics: {e}", exc_info=True)
+            return {
+                "total_books": kpi_baseline.get("total_books", 0) if 'kpi_baseline' in locals() else 0,
+                "books_borrowed": 0,
+                "overdue_books": kpi_baseline.get("overdue_books", 0) if 'kpi_baseline' in locals() else 0,
+                "active_users": 0,
+                "utilization_rate": 0.0,
+                "new_registrations": 0
+            }
 
     @staticmethod
     def get_borrowing_trends(start_date: datetime, end_date: datetime) -> List[Dict]:
-        """Get borrowing trends with mock data fallback"""
+        """Get borrowing trends with normalization and mock fallback.
+
+        Ensures returned records include 'date', 'borrowings', 'returns'. If API returns
+        only totals or alternative keys, normalize them. If all values are zero or data
+        missing, return an empty list to trigger friendly empty-state in charts.
+        """
         try:
-            # 确保日期时间对象有时区信息
             if start_date.tzinfo is None:
                 start_date = start_date.replace(tzinfo=timezone.utc)
             if end_date.tzinfo is None:
                 end_date = end_date.replace(tzinfo=timezone.utc)
-            
+
             logger.debug(f"Fetching borrowing trends from {start_date} to {end_date}")
             params = {
                 "start_date": start_date.strftime("%Y-%m-%d"),
                 "end_date": end_date.strftime("%Y-%m-%d")
             }
-            data = fetch_api_data("borrowing_trends", params)
-            if not data:
-                logger.warning("Using mock borrowing trends data")
-                # Mock data
+            raw = fetch_api_data("borrowing_trends", params)
+
+            # Normalize various possible shapes
+            records: List[Dict] = []
+            if isinstance(raw, dict):
+                # Try common shapes
+                daily = raw.get("daily") or raw.get("data") or raw.get("items")
+                if isinstance(daily, list):
+                    raw = daily
+                else:
+                    raw = []
+
+            if isinstance(raw, list):
+                for item in raw:
+                    if not isinstance(item, dict):
+                        continue
+                    date_str = item.get("date") or item.get("day") or item.get("created_at")
+                    bor = item.get("borrowings")
+                    ret = item.get("returns")
+                    # Alternate key names commonly used
+                    if bor is None:
+                        bor = item.get("borrow_count") or item.get("borrowed") or item.get("borrows") or 0
+                    if ret is None:
+                        ret = item.get("return_count") or item.get("returned") or 0
+                    if date_str is None:
+                        continue
+                    try:
+                        # Keep as YYYY-MM-DD string for chart; parsing done later
+                        date_norm = pd.to_datetime(str(date_str)).strftime("%Y-%m-%d")
+                    except Exception:
+                        continue
+                    try:
+                        bor = int(bor)
+                    except Exception:
+                        bor = 0
+                    try:
+                        ret = int(ret)
+                    except Exception:
+                        ret = 0
+                    records.append({"date": date_norm, "borrowings": bor, "returns": ret})
+
+            if not records:
+                logger.warning("Using mock borrowing trends data due to empty/invalid API data")
                 dates = pd.date_range(start=start_date, end=end_date, freq='D')
-                return [{"date": date.strftime("%Y-%m-%d"), "borrowings": 15 + i % 10, "returns": 12 + i % 8} 
-                       for i, date in enumerate(dates)]
-            return data
+                records = [{"date": d.strftime("%Y-%m-%d"), "borrowings": 15 + i % 10, "returns": 12 + i % 8}
+                           for i, d in enumerate(dates)]
+
+            # If sums are zero, return empty so chart shows friendly message
+            total = sum(r.get("borrowings", 0) for r in records) + sum(r.get("returns", 0) for r in records)
+            if total == 0:
+                logger.info("Borrowing trends all zeros for selected range; returning empty for UI message")
+                return []
+
+            return records
         except Exception as e:
             logger.error(f"Error in get_borrowing_trends: {str(e)}", exc_info=True)
             return []
@@ -169,10 +297,10 @@ class APIClient:
             "limit": limit
         }
         if start_date:
-            # 只保留日期部分，不包含时间
+            # Use date part only (no time component)
             params["start_date"] = start_date.strftime("%Y-%m-%d")
         if end_date:
-            # 只保留日期部分，不包含时间
+            # Use date part only (no time component)
             params["end_date"] = end_date.strftime("%Y-%m-%d")
             
         data = fetch_api_data("popular_books", params)
@@ -225,7 +353,7 @@ class APIClient:
     def get_overdue_analysis() -> List[Dict]:
         """Get overdue analysis with mock data fallback"""
         logger.debug("Fetching overdue analysis")
-        data = fetch_api_data("overdue")  # 使用正确的端点
+        data = fetch_api_data("overdue")  # use correct endpoint
         if not data:
             logger.warning("Using mock overdue analysis data")
             return [
@@ -238,34 +366,112 @@ class APIClient:
 
     @staticmethod
     def get_library_utilization(start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        """Get library utilization with mock data fallback"""
+        """Get library utilization with robust parsing and mock fallback.
+
+        Accepts multiple API response shapes and normalizes to DataFrame(date, utilization_rate).
+        utilization_rate is expressed in 0-100 percentage.
+        """
         try:
             params = {
                 "start_date": start_date.strftime("%Y-%m-%d"),
                 "end_date": end_date.strftime("%Y-%m-%d")
             }
-            # 直接使用 get_api_data 而不是 fetch_api_data
             data = APIClient.get_api_data("library_utilization", params)
             logger.debug(f"Raw utilization data: {data}")
-            
-            if not data:
-                logger.warning("No utilization data received from API")
+
+            # Normalize various shapes
+            records: List[Dict] = []
+            if isinstance(data, dict):
+                # Preferred: { daily_utilization: { 'YYYY-MM-DD': value, ... } }
+                daily = data.get("daily_utilization") or data.get("daily") or {}
+                if isinstance(daily, dict):
+                    for d, v in daily.items():
+                        try:
+                            date_norm = pd.to_datetime(str(d)).strftime("%Y-%m-%d")
+                        except Exception:
+                            continue
+                        try:
+                            val = float(v)
+                        except Exception:
+                            val = 0.0
+                        # If looks like ratio (0-1), scale to percentage
+                        if 0 <= val <= 1:
+                            val *= 100.0
+                        records.append({"date": date_norm, "utilization_rate": val})
+                # Alternative: list under key
+                elif isinstance(data.get("data"), list):
+                    for item in data.get("data", []):
+                        if not isinstance(item, dict):
+                            continue
+                        date_str = item.get("date") or item.get("day")
+                        if not date_str:
+                            continue
+                        try:
+                            date_norm = pd.to_datetime(str(date_str)).strftime("%Y-%m-%d")
+                        except Exception:
+                            continue
+                        val = item.get("utilization_rate")
+                        if val is None:
+                            val = item.get("utilization")
+                        if val is None:
+                            # Try to infer from counts if provided
+                            bor = item.get("borrowings") or item.get("borrow_count") or 0
+                            total = item.get("total_books") or item.get("capacity") or 0
+                            if total:
+                                try:
+                                    val = (float(bor) / float(total)) * 100.0
+                                except Exception:
+                                    val = 0.0
+                            else:
+                                val = 0.0
+                        try:
+                            val = float(val)
+                        except Exception:
+                            val = 0.0
+                        if 0 <= val <= 1:
+                            val *= 100.0
+                        records.append({"date": date_norm, "utilization_rate": val})
+            elif isinstance(data, list):
+                for item in data:
+                    if not isinstance(item, dict):
+                        continue
+                    date_str = item.get("date") or item.get("day")
+                    if not date_str:
+                        continue
+                    try:
+                        date_norm = pd.to_datetime(str(date_str)).strftime("%Y-%m-%d")
+                    except Exception:
+                        continue
+                    val = item.get("utilization_rate")
+                    if val is None:
+                        val = item.get("utilization")
+                    if val is None:
+                        bor = item.get("borrowings") or item.get("borrow_count") or 0
+                        total = item.get("total_books") or item.get("capacity") or 0
+                        if total:
+                            try:
+                                val = (float(bor) / float(total)) * 100.0
+                            except Exception:
+                                val = 0.0
+                        else:
+                            val = 0.0
+                    try:
+                        val = float(val)
+                    except Exception:
+                        val = 0.0
+                    if 0 <= val <= 1:
+                        val *= 100.0
+                    records.append({"date": date_norm, "utilization_rate": val})
+
+            if not records:
+                logger.warning("No utilization data received/parsed; returning empty frame for friendly UI message")
                 return pd.DataFrame(columns=["date", "utilization_rate"])
-            
-            # 处理每日利用率数据
-            daily_data = []
-            for date, count in data.get("daily_utilization", {}).items():
-                daily_data.append({
-                    "date": date,
-                    "utilization_rate": count
-                })
-            
-            if daily_data:
-                return pd.DataFrame(daily_data)
-            else:
-                logger.warning("No daily utilization data found in response")
+
+            df = pd.DataFrame(records)
+            # If all zeros, return empty to show friendly message upstream
+            if df["utilization_rate"].fillna(0).sum() == 0:
                 return pd.DataFrame(columns=["date", "utilization_rate"])
-            
+            return df
         except Exception as e:
             logger.error(f"Error in get_library_utilization: {str(e)}", exc_info=True)
             return pd.DataFrame(columns=["date", "utilization_rate"])

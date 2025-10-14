@@ -417,7 +417,7 @@ def create_student_activity_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
     return fig
 
 def create_overdue_analysis_chart(data: Union[List[Dict], pd.DataFrame]) -> go.Figure:
-    """Create overdue analysis chart from overdue books list"""
+    """Create overdue analysis bar chart with value labels (no heatmap/colorbar)."""
     # Convert to DataFrame if needed
     if isinstance(data, list):
         if not data:
@@ -429,36 +429,38 @@ def create_overdue_analysis_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
     if df.empty or 'days_overdue' not in df.columns:
         return create_empty_chart("Overdue data format error")
 
-    # 强制转换 不然一直又格式问题
+    # Force numeric conversion to avoid dtype issues
     df['days_overdue'] = pd.to_numeric(df['days_overdue'], errors='coerce')
     df = df.dropna(subset=['days_overdue'])
 
     if df.empty:
         return create_empty_chart("No valid overdue data")
 
-    # 统计逾期天数区间
+    # Aggregate overdue days into ranges
     bins = [0, 3, 7, 14, 9999]
     labels = ["1-3 days", "4-7 days", "8-14 days", "15+ days"]
     df['overdue_range'] = pd.cut(df['days_overdue'], bins=bins, labels=labels, right=True)
     count_by_range = df['overdue_range'].value_counts().sort_index()
     chart_df = pd.DataFrame({
-        "days_overdue": count_by_range.index,
+        "days_overdue": count_by_range.index.astype(str),
         "count": count_by_range.values
     })
 
-    fig = px.bar(
-        chart_df,
-        x="days_overdue",
-        y="count",
-        title="⚠️ Overdue Books Analysis",
-        template=CHART_CONFIG["template"],
-        color="count",
-        color_continuous_scale="reds"
-    )
+    # Simplified bar chart without colorbar, add value labels
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=chart_df["days_overdue"],
+        y=chart_df["count"],
+        marker_color=CHART_CONFIG['colors']['danger'],
+        text=chart_df["count"],
+        textposition='outside',
+        hovertemplate='<b>%{x}</b><br>Count: %{y}<extra></extra>'
+    ))
 
     fig.update_layout(
         height=CHART_CONFIG["height"],
         title=dict(
+            text="⚠️ Overdue Books Analysis",
             font=dict(size=18, color="#2c3e50"),
             x=0.5,
             xanchor='center'
@@ -466,8 +468,12 @@ def create_overdue_analysis_chart(data: Union[List[Dict], pd.DataFrame]) -> go.F
         xaxis_title="Overdue Days",
         yaxis_title="Number of Books",
         showlegend=False,
-        margin=dict(l=60, r=60, t=80, b=60)
+        margin=dict(l=60, r=60, t=80, b=60),
+        template=CHART_CONFIG["template"]
     )
+
+    # Slightly larger y-axis max to make room for labels
+    fig.update_yaxes(range=[0, max(1, chart_df['count'].max() * 1.25)])
 
     return fig
 
@@ -497,7 +503,11 @@ def create_utilization_chart(data: Union[List[Dict], pd.DataFrame, Dict]) -> go.
     else:
         return create_empty_chart("Invalid utilization data format")
     
-    if df.empty or 'date' not in df.columns or 'utilization_rate' not in df.columns:
+    # Gracefully handle empty DataFrame
+    if isinstance(df, pd.DataFrame) and df.empty:
+        return create_empty_chart("No utilization data available")
+
+    if 'date' not in df.columns or 'utilization_rate' not in df.columns:
         return create_empty_chart("Invalid utilization data format: missing required columns")
     
     # Convert date column to datetime
