@@ -82,28 +82,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=600)  # Cache for 10 minutes
 def get_cached_data(start_dt: datetime, end_dt: datetime, date_range_label: str):
     """Get all dashboard data in one go to reduce API calls"""
     try:
         logger.debug("Fetching dashboard data")
         # Get all data (period-aware)
-        kpi_data = APIClient.get_kpi_metrics(start_date=start_dt, end_date=end_dt)
+        with st.spinner('Loading KPI data...'):
+            kpi_data = APIClient.get_kpi_metrics(start_date=start_dt, end_date=end_dt)
         logger.debug(f"KPI data: {kpi_data}")
         
-        popular_books = APIClient.get_popular_books(limit=10, start_date=start_dt, end_date=end_dt)
+        with st.spinner('Loading popular books...'):
+            popular_books = APIClient.get_popular_books(limit=10, start_date=start_dt, end_date=end_dt)
         logger.debug(f"Popular books: {popular_books}")
         
-        category_stats = APIClient.get_category_stats()
+        with st.spinner('Loading category stats...'):
+            category_stats = APIClient.get_category_stats()
         logger.debug(f"Category stats: {category_stats}")
         
-        student_activity = APIClient.get_student_activity(limit=10, start_date=start_dt, end_date=end_dt)
+        with st.spinner('Loading student activity...'):
+            student_activity = APIClient.get_student_activity(limit=10, start_date=start_dt, end_date=end_dt)
         logger.debug(f"Student activity: {student_activity}")
         
-        overdue_analysis = APIClient.get_overdue_analysis()
+        with st.spinner('Loading overdue analysis...'):
+            overdue_analysis = APIClient.get_overdue_analysis()
         logger.debug(f"Overdue analysis: {overdue_analysis}")
         
-        overdue_books = APIClient.get_overdue_books()
+        with st.spinner('Loading overdue books...'):
+            overdue_books = APIClient.get_overdue_books()
         logger.debug(f"Overdue books: {overdue_books}")
         
         return {
@@ -328,69 +334,105 @@ with col2:
         logger.error(f"Failed to load utilization data: {str(e)}", exc_info=True)
         st.error(f"Failed to load utilization data: {str(e)}")
 
-# Detailed Tables
+def paginate_dataframe(df: pd.DataFrame, page_size: int = 50, key_prefix: str = "") -> pd.DataFrame:
+    total = len(df)
+    if total == 0:
+        return df
+    total_pages = (total + page_size - 1) // page_size
+    c1, c2, c3 = st.columns([1,2,1])
+    with c1:
+        prev = st.button("◀ Prev", key=f"prev_{key_prefix}", use_container_width=True)
+    with c3:
+        nextb = st.button("Next ▶", key=f"next_{key_prefix}", use_container_width=True)
+    current_page = st.number_input(
+        "Page",
+        min_value=1,
+        max_value=total_pages,
+        value=st.session_state.get(f"page_{key_prefix}", 1),
+        step=1,
+        key=f"page_{key_prefix}"
+    )
+    # Adjust page on button clicks
+    if prev and current_page > 1:
+        st.session_state[f"page_{key_prefix}"] = current_page - 1
+    if nextb and current_page < total_pages:
+        st.session_state[f"page_{key_prefix}"] = current_page + 1
+    current_page = st.session_state.get(f"page_{key_prefix}", 1)
+    start_idx = (current_page - 1) * page_size
+    end_idx = min(start_idx + page_size, total)
+    st.caption(f"Showing {start_idx+1}-{end_idx} of {total}")
+    return df.iloc[start_idx:end_idx]
+
+# Detailed Tables (lazy render and pagination)
 st.markdown('<h2 class="section-header">📋 Detailed Information</h2>', unsafe_allow_html=True)
 
 # Overdue Books Table
 with st.expander("⚠️ Overdue Books Details", expanded=False):
-    if overdue_books:
-        # Convert to DataFrame if it's a list
-        if isinstance(overdue_books, list):
-            overdue_df = pd.DataFrame(overdue_books)
-        else:
-            overdue_df = overdue_books
-            
-        # Format due_date as YYMMDD without timezone
-        if not overdue_df.empty and 'due_date' in overdue_df.columns:
-            overdue_df['due_date'] = pd.to_datetime(overdue_df['due_date'], errors='coerce').dt.strftime('%y%m%d')
-
-        if not overdue_df.empty:
-            st.dataframe(
-                overdue_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "title": "Book Title",
-                    "student_name": "Student Name",
-                    "days_overdue": st.column_config.NumberColumn(
-                        "Days Overdue",
-                        format="%d days"
-                    ),
-                    "due_date": "Due Date"
-                }
-            )
-        else:
-            st.info("✅ No overdue books found!")
-    else:
-        st.info("✅ No overdue books found!")
+    load_overdue = st.checkbox("Load overdue table", value=False, key="load_overdue")
+    if load_overdue:
+        with st.spinner("Loading overdue table..."):
+            if overdue_books:
+                # Convert to DataFrame if it's a list
+                if isinstance(overdue_books, list):
+                    overdue_df = pd.DataFrame(overdue_books)
+                else:
+                    overdue_df = overdue_books
+                # Format due_date as YYMMDD without timezone
+                if not overdue_df.empty and 'due_date' in overdue_df.columns:
+                    overdue_df['due_date'] = pd.to_datetime(overdue_df['due_date'], errors='coerce').dt.strftime('%y%m%d')
+                # Paginate
+                page_df = paginate_dataframe(overdue_df, page_size=50, key_prefix="overdue")
+                if not page_df.empty:
+                    st.dataframe(
+                        page_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "title": "Book Title",
+                            "student_name": "Student Name",
+                            "days_overdue": st.column_config.NumberColumn(
+                                "Days Overdue",
+                                format="%d days"
+                            ),
+                            "due_date": "Due Date"
+                        }
+                    )
+                else:
+                    st.info("✅ No overdue books found!")
+            else:
+                st.info("✅ No overdue books found!")
 
 # Popular Books Table
 with st.expander("📚 Popular Books Details", expanded=False):
-    if popular_books:
-        # Convert to DataFrame if it's a list
-        if isinstance(popular_books, list):
-            popular_df = pd.DataFrame(popular_books)
-        else:
-            popular_df = popular_books
-            
-        if not popular_df.empty:
-            st.dataframe(
-                popular_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "title": "Book Title",
-                    "author": "Author",
-                    "borrow_count": st.column_config.NumberColumn(
-                        "Borrow Count",
-                        format="%d times"
+    load_popular = st.checkbox("Load popular books table", value=False, key="load_popular")
+    if load_popular:
+        with st.spinner("Loading popular books table..."):
+            if popular_books:
+                # Convert to DataFrame if it's a list
+                if isinstance(popular_books, list):
+                    popular_df = pd.DataFrame(popular_books)
+                else:
+                    popular_df = popular_books
+                # Paginate
+                page_df = paginate_dataframe(popular_df, page_size=50, key_prefix="popular")
+                if not page_df.empty:
+                    st.dataframe(
+                        page_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "title": "Book Title",
+                            "author": "Author",
+                            "borrow_count": st.column_config.NumberColumn(
+                                "Borrow Count",
+                                format="%d times"
+                            )
+                        }
                     )
-                }
-            )
-        else:
-            st.info("No popular books data available")
-    else:
-        st.info("No popular books data available")
+                else:
+                    st.info("No popular books data available")
+            else:
+                st.info("No popular books data available")
 
 # Removed Data Quality Summary section per request
 

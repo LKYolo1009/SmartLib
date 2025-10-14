@@ -122,10 +122,10 @@ class APIClient:
             logger.debug("Fetching KPI baseline")
             kpi_baseline = fetch_api_data("kpi") or {}
 
+            # If no period provided, return baseline KPI mapped to UI keys (or mock if unavailable)
             if not start_date or not end_date:
-                # No period provided → return backend KPI as-is (mapped to expected keys)
                 if kpi_baseline:
-                    mapped = {
+                    return {
                         "total_books": kpi_baseline.get("total_books", 0),
                         "books_borrowed": kpi_baseline.get("active_borrows", 0),
                         "overdue_books": kpi_baseline.get("overdue_books", 0),
@@ -133,47 +133,45 @@ class APIClient:
                         "utilization_rate": kpi_baseline.get("return_rate", 0.0),
                         "new_registrations": 0
                     }
-                    return mapped
-                logger.warning("Using mock KPI data (no baseline)")
-                return {
-                    "total_books": 2500,
-                    "books_borrowed": 450,
-                    "overdue_books": 23,
-                    "active_users": 180,
-                    "utilization_rate": 85.2,
-                    "new_registrations": 12
-                }
+                logger.warning("KPI baseline missing; using mock")
+            return {
+                "total_books": 2500,
+                "books_borrowed": 450,
+                "overdue_books": 23,
+                "active_users": 180,
+                "utilization_rate": 85.2,
+                "new_registrations": 12
+            }
 
-            # Period-aware aggregation
+            # Period-aware: prefer backend KPI with dates
             params_dates = {
                 "start_date": start_date.strftime("%Y-%m-%d"),
                 "end_date": end_date.strftime("%Y-%m-%d")
             }
+            period_kpi = fetch_api_data("kpi", params_dates)
+            if isinstance(period_kpi, dict) and period_kpi.get("total_books") is not None:
+                return {
+                    "total_books": period_kpi.get("total_books", 0),
+                    "books_borrowed": period_kpi.get("active_borrows", 0),
+                    "overdue_books": period_kpi.get("overdue_books", 0),
+                    "active_users": period_kpi.get("total_students", 0),
+                    "utilization_rate": period_kpi.get("return_rate", 0.0),
+                    "new_registrations": 0
+                }
 
-            # Borrowing trends full object for unique_readers
+            # Fallback: compute from other endpoints
             trend_full = APIClient.get_api_data("borrowing_trends", {**params_dates, "interval": "day"}) or {}
-            unique_readers = 0
-            if isinstance(trend_full, dict):
-                unique_readers = int(trend_full.get("unique_readers", 0) or 0)
+            unique_readers = int(trend_full.get("unique_readers", 0) or 0) if isinstance(trend_full, dict) else 0
 
-            # Sum borrowings over period using our normalized trends helper
             trend_series = APIClient.get_borrowing_trends(start_date, end_date)
-            period_borrows = 0
-            if isinstance(trend_series, list) and trend_series:
-                period_borrows = int(sum(max(0, int(item.get("borrowings", 0) or 0)) for item in trend_series))
+            period_borrows = int(sum(max(0, int(item.get("borrowings", 0) or 0)) for item in trend_series)) if isinstance(trend_series, list) else 0
 
-            # Utilization average
             util_df = APIClient.get_library_utilization(start_date, end_date)
-            if not util_df.empty:
-                utilization_rate = float(util_df["utilization_rate"].mean())
-            else:
-                utilization_rate = 0.0
+            utilization_rate = float(util_df["utilization_rate"].mean()) if not util_df.empty else 0.0
 
-            # Overdue count (current overdue not period-bound)
             overdue_list = fetch_api_data("overdue") or []
             overdue_count = len(overdue_list) if isinstance(overdue_list, list) else int(kpi_baseline.get("overdue_books", 0) or 0)
 
-            # Total books from baseline
             total_books = int(kpi_baseline.get("total_books", 0) or 0)
 
             result = {
@@ -184,7 +182,7 @@ class APIClient:
                 "utilization_rate": utilization_rate,
                 "new_registrations": 0
             }
-            logger.debug(f"Period KPI computed: {result}")
+            logger.debug(f"Period KPI computed (fallback): {result}")
             return result
         except Exception as e:
             logger.error(f"Error in get_kpi_metrics: {e}", exc_info=True)
@@ -210,7 +208,7 @@ class APIClient:
                 start_date = start_date.replace(tzinfo=timezone.utc)
             if end_date.tzinfo is None:
                 end_date = end_date.replace(tzinfo=timezone.utc)
-
+            
             logger.debug(f"Fetching borrowing trends from {start_date} to {end_date}")
             params = {
                 "start_date": start_date.strftime("%Y-%m-%d"),
@@ -378,7 +376,7 @@ class APIClient:
             }
             data = APIClient.get_api_data("library_utilization", params)
             logger.debug(f"Raw utilization data: {data}")
-
+            
             # Normalize various shapes
             records: List[Dict] = []
             if isinstance(data, dict):
@@ -466,7 +464,7 @@ class APIClient:
             if not records:
                 logger.warning("No utilization data received/parsed; returning empty frame for friendly UI message")
                 return pd.DataFrame(columns=["date", "utilization_rate"])
-
+            
             df = pd.DataFrame(records)
             # If all zeros, return empty to show friendly message upstream
             if df["utilization_rate"].fillna(0).sum() == 0:
@@ -742,5 +740,4 @@ def get_category_trends() -> pd.DataFrame:
     return pd.DataFrame()
 
 def get_api_client():
-    """获取API客户端实例"""
     return APIClient(API_BASE_URL)
