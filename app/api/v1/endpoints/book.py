@@ -6,6 +6,7 @@ from sqlalchemy import func, or_
 import logging
 from app.db.session import get_db
 from app.crud.book import book_crud
+from app.crud.book_copy import book_copy_crud
 from app.models.book import Book
 from app.schemas.book import (
     BookCreate,
@@ -14,6 +15,7 @@ from app.schemas.book import (
     BookUpdate,
     BookAvailabilityResponse
 )
+from app.schemas.book_copy import BookCopyCreate
 from fastapi import Path
 
 router = APIRouter()
@@ -77,28 +79,42 @@ def create_book(
     db: Session = Depends(get_db),
     book_in: BookCreate,
 ):
-    # Create book record
-    new_book = book_crud.create(db=db, obj_in=book_in)
+    try:
+        # Create book record
+        new_book = book_crud.create(db=db, obj_in=book_in)
 
-    # If initial copy count is specified, create the corresponding number of copies
-    if book_in.initial_copies > 0:
-        from app.crud import book_copy as book_copy_crud
-        from app.schemas.book_copy import BookCopyCreate
-
-        for i in range(book_in.initial_copies):
-            # Create copy
-            book_copy_crud.create(
-                db=db,
-                obj_in=BookCopyCreate(
+        # If initial copy count is specified, create the corresponding number of copies
+        if book_in.initial_copies > 0:
+            for i in range(book_in.initial_copies):
+                # Create copy with all required fields
+                copy_data = BookCopyCreate(
                     book_id=new_book.book_id,
                     acquisition_type="purchased",
                     acquisition_date=datetime.now().date(),
+                    price=0.0,  # Add default price
+                    condition="new",
                     status="available",
-                    condition="new"
+                    location_id=1,  # Add default location
+                    notes="Auto-created copy"
                 )
-            )
+                
+                # Create the copy
+                book_copy_crud.create(
+                    db=db,
+                    obj_in=copy_data
+                )
 
-    return new_book
+        return new_book
+        
+    except Exception as e:
+        print(f"❌ DEBUG: Error in create_book function: {str(e)}")
+        print(f"❌ DEBUG: Error type: {type(e)}")
+        import traceback
+        print(f"❌ DEBUG: Full traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create book: {str(e)}"
+        )
 # done
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_book(

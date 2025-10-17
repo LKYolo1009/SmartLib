@@ -193,23 +193,28 @@ class CRUDBook(CRUDBase[Book, BookCreate, BookUpdate]):
         """
         Create a new book
         """
-        # Check if ISBN already exists (only if ISBN is provided)
-        if obj_in.isbn:
-            existing_book = self.get_by_isbn(db, isbn=obj_in.isbn)
-            if existing_book:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="this ISBN already exists"
-                )
+        try:
+            # Check if ISBN already exists (only if ISBN is provided)
+            if obj_in.isbn:
+                existing_book = self.get_by_isbn(db, isbn=obj_in.isbn)
+                if existing_book:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="this ISBN already exists"
+                    )
 
-        # Convert Pydantic model to dict and create DB object
-        obj_data = obj_in.model_dump(exclude={"initial_copies"})
-        db_obj = Book(**obj_data)
+            # Convert Pydantic model to dict and create DB object
+            obj_data = obj_in.model_dump(exclude={"initial_copies"})
+            db_obj = Book(**obj_data)
 
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+            return db_obj
+            
+        except Exception as e:
+            db.rollback()  # Rollback the transaction
+            raise
 
     def update(
         self,
