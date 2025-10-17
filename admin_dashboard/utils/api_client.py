@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import ENDPOINTS, API_BASE_URL
+from config import ENDPOINTS, API_BASE_URL, CATEGORY_ID_MAPPING, LANGUAGE_CODE_MAPPING, ACQUISITION_TYPE_MAPPING, BOOK_CONDITION_MAPPING, BOOK_STATUS_MAPPING, BOOK_LOCATION_AREA_MAPPING
 
 @st.cache_data(ttl=300)
 def fetch_api_data(endpoint: str, params: dict = None) -> dict:
@@ -607,6 +607,7 @@ class APIClient:
                     "acquisition_date": c.get("acquisition_date", ""),
                     "price": c.get("price", 0.0),
                     "condition": c.get("condition", ""),
+                    "status": c.get("status", ""),
                     "book_location": c.get("location_name", "")
                 })
 
@@ -619,52 +620,322 @@ class APIClient:
 
     # Function to add a new book and its copies
     @staticmethod
+    def check_book_title_exists(title: str) -> bool:
+        """Check if a book title already exists in the database"""
+        try:
+            url = ENDPOINTS["search_book_by_title"]
+            # The endpoint expects the title as a path parameter
+            search_url = f"{url}/{title}"
+            response = requests.get(search_url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # If we get results, the title exists
+                return len(data) > 0
+            elif response.status_code == 404:
+                # No results found, title doesn't exist
+                return False
+            else:
+                # Other error status codes
+                logger.error(f"Error checking book title: {response.status_code} - {response.text}")
+                return False
+        except Exception as e:
+            logger.error(f"Error checking book title existence: {e}")
+            return False
+
+    @staticmethod
+    def get_or_create_author_id(author_name: str) -> int:
+        """Get existing author ID or create new author and return ID"""
+        try:
+            # First, search for existing author
+            search_url = f"{ENDPOINTS['search_author_by_name']}/{author_name}"
+            logger.debug(f"Searching for author with URL: {search_url}")
+            response = requests.get(search_url)
+            
+            logger.debug(f"Search response status: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                logger.debug(f"Search response data: {data}")
+                if data and len(data) > 0:
+                    # Author exists, return the first author's ID
+                    author_id = data[0].get('author_id')
+                    if author_id:
+                        logger.info(f"Found existing author '{author_name}' with ID: {author_id}")
+                        return author_id
+            elif response.status_code == 404:
+                logger.info(f"Author '{author_name}' not found in search, will try to create")
+            else:
+                logger.warning(f"Unexpected search response: {response.status_code} - {response.text}")
+            
+            # Author doesn't exist, create new one
+            author_data = {"author_name": author_name}
+            api_client = APIClient()
+            # Extract just the path from the full URL
+            create_endpoint = ENDPOINTS["create_author"].replace(API_BASE_URL, "")
+            logger.debug(f"Creating author with endpoint: {create_endpoint}, data: {author_data}")
+            response = api_client.post(create_endpoint, json=author_data)
+            
+            logger.debug(f"Create response status: {response.status_code}")
+            logger.debug(f"Create response text: {response.text}")
+            
+            if response.status_code in [200, 201]:
+                new_author = response.json()
+                author_id = new_author.get('author_id')
+                if author_id:
+                    logger.info(f"Created new author '{author_name}' with ID: {author_id}")
+                    return author_id
+                else:
+                    logger.error(f"Author creation response missing author_id: {new_author}")
+                    return None
+            elif response.status_code == 400:
+                # Author already exists but search didn't find it
+                logger.warning(f"Author '{author_name}' already exists but search didn't find it. This might indicate a search API issue.")
+                # Try to get all authors and find the one we need
+                return APIClient._find_author_by_name_fallback(author_name)
+            else:
+                logger.error(f"Failed to create author: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting/creating author: {e}")
+            return None
+
+    @staticmethod
+    def _find_author_by_name_fallback(author_name: str) -> int:
+        """Fallback method to find author by getting all authors and searching locally"""
+        try:
+            logger.info(f"Using fallback method to find author '{author_name}'")
+            # Get all authors from the general authors endpoint
+            response = requests.get(ENDPOINTS["author"])
+            if response.status_code == 200:
+                authors = response.json()
+                logger.debug(f"Retrieved {len(authors)} authors from fallback endpoint")
+                # Search for author by name
+                for author in authors:
+                    if author.get('author_name', '').lower() == author_name.lower():
+                        author_id = author.get('author_id')
+                        if author_id:
+                            logger.info(f"Found author '{author_name}' with ID: {author_id} via fallback")
+                            return author_id
+                logger.warning(f"Author '{author_name}' not found even in fallback search")
+                return None
+            else:
+                logger.error(f"Fallback author search failed: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Error in fallback author search: {e}")
+            return None
+
+    @staticmethod
+    def get_or_create_publisher_id(publisher_name: str) -> int:
+        """Get existing publisher ID or create new publisher and return ID"""
+        try:
+            # First, search for existing publisher
+            search_url = f"{ENDPOINTS['search_publisher_by_name']}/{publisher_name}"
+            logger.debug(f"Searching for publisher with URL: {search_url}")
+            response = requests.get(search_url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    # Publisher exists, return the first publisher's ID
+                    publisher_id = data[0].get('publisher_id')
+                    if publisher_id:
+                        logger.info(f"Found existing publisher '{publisher_name}' with ID: {publisher_id}")
+                        return publisher_id
+            elif response.status_code == 404:
+                logger.info(f"Publisher '{publisher_name}' not found in search, will try to create")
+            
+            # Publisher doesn't exist, create new one
+            publisher_data = {"publisher_name": publisher_name}
+            api_client = APIClient()
+            # Extract just the path from the full URL
+            create_endpoint = ENDPOINTS["create_publisher"].replace(API_BASE_URL, "")
+            response = api_client.post(create_endpoint, json=publisher_data)
+            
+            if response.status_code in [200, 201]:
+                new_publisher = response.json()
+                publisher_id = new_publisher.get('publisher_id')
+                if publisher_id:
+                    logger.info(f"Created new publisher '{publisher_name}' with ID: {publisher_id}")
+                    return publisher_id
+                else:
+                    logger.error(f"Publisher creation response missing publisher_id: {new_publisher}")
+                    return None
+            elif response.status_code == 400:
+                # Publisher already exists but search didn't find it
+                logger.warning(f"Publisher '{publisher_name}' already exists but search didn't find it. This might indicate a search API issue.")
+                # For now, we'll return None since we don't have a fallback endpoint for publishers
+                return None
+            else:
+                logger.error(f"Failed to create publisher: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting/creating publisher: {e}")
+            return None
+
+    @staticmethod
+    def get_or_create_location_id(location_name: str) -> int:
+        """Get existing location ID or create new location and return ID"""
+        try:
+            # First, search for existing location
+            search_url = f"{ENDPOINTS['search_location_by_name']}/{location_name}"
+            logger.debug(f"Searching for location with URL: {search_url}")
+            response = requests.get(search_url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    # Location exists, return the first location's ID
+                    location_id = data[0].get('location_id')
+                    if location_id:
+                        logger.info(f"Found existing location '{location_name}' with ID: {location_id}")
+                        return location_id
+            
+            # Location doesn't exist, create new one
+            location_data = {"location_name": location_name}
+            api_client = APIClient()
+            # Extract just the path from the full URL
+            create_endpoint = ENDPOINTS["create_location"].replace(API_BASE_URL, "")
+            response = api_client.post(create_endpoint, json=location_data)
+            
+            if response.status_code in [200, 201]:
+                new_location = response.json()
+                location_id = new_location.get('location_id')
+                if location_id:
+                    logger.info(f"Created new location '{location_name}' with ID: {location_id}")
+                    return location_id
+                else:
+                    logger.error(f"Location creation response missing location_id: {new_location}")
+                    return None
+            else:
+                logger.error(f"Failed to create location: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting/creating location: {e}")
+            return None
+
+    @staticmethod
     def add_new_book_details():
         """Add a new book and its specified number of copies"""
         try:
             # Extract form data from session state
             form_data = st.session_state.add_form
+            
+            # Get category ID and language code from mappings
+            category_id = CATEGORY_ID_MAPPING.get(form_data['category'], 1)  # Default to 1 if not found
+            language_code = LANGUAGE_CODE_MAPPING.get(form_data['language'], "EN")  # Default to EN if not found
+            
+            # Resolve author ID (search existing or create new)
+            author_id = APIClient.get_or_create_author_id(form_data['author_name'])
+            if author_id is None:
+                st.error(f"Failed to resolve author ID for '{form_data['author_name']}'")
+                return False
+            
+            # Resolve publisher ID (search existing or create new)
+            publisher_id = APIClient.get_or_create_publisher_id(form_data['publisher_name'])
+            if publisher_id is None:
+                st.error(f"Failed to resolve publisher ID for '{form_data['publisher_name']}'")
+                return False
+            
+            # Get location ID from mapping
+            location_id = BOOK_LOCATION_AREA_MAPPING.get(form_data['location_area'])
+            if location_id is None:
+                st.error(f"Invalid location area: '{form_data['location_area']}'")
+                return False
+            
             book_data = {
-                "author_id": 1,  # Placeholder, replace with dynamic author_id (e.g., from a dropdown)
+                "author_id": author_id,
                 "call_number": form_data['call_number'],
-                "category_id": 1,  # Placeholder, replace with dynamic category_id
-                "initial_copies": form_data['total_copy'],  # Number of copies to create
+                "category_id": category_id,
+                "initial_copies": form_data['total_copy'],  # Use user's input for initial copies
                 "isbn": form_data['isbn'],
-                "language_code": form_data['language'].upper()[:2] if form_data['language'] else "EN",  # 2-letter code
+                "language_code": language_code,
                 "publication_year": form_data['publication_year'],
-                "publisher_id": 1,  # Placeholder, replace with dynamic publisher_id
+                "publisher_id": publisher_id,
                 "title": form_data['title']
             }
 
             # Create the book
-            response = APIClient.post(ENDPOINTS["create_book"], json=book_data)
+            api_client = APIClient()
+            # Extract just the path from the full URL
+            create_endpoint = ENDPOINTS["create_book"].replace(API_BASE_URL, "")
+            response = api_client.post(create_endpoint, json=book_data)
             if response.status_code != 201:
                 st.error(f"Failed to create book: {response.text}")
                 return False
             book = response.json()
             book_id = book.get("book_id")
 
-            # Create copies based on initial_copies
-            copy_data_template = {
-                "book_id": book_id,
-                "acquisition_type": form_data['acquisition_type'],
-                "acquisition_date": str(form_data['acquisition_date']),
-                "price": form_data['price'],
-                "condition": form_data['condition'],
-                "status": "available",  # Default status
-                "location_id": 1,  # Placeholder, replace with dynamic location_id
-                "notes": form_data['book_location']  # Using book_location as notes
-            }
-            for _ in range(form_data['total_copy']):
-                response = APIClient.post(ENDPOINTS["create_book_copy"], json=copy_data_template)
-                if response.status_code != 201:
-                    st.error(f"Failed to create copy: {response.text}")
-                    return False
-
-            st.success(f"Book and {form_data['total_copy']} copies added successfully")
+            # The API automatically creates copies based on initial_copies
+            if form_data['total_copy'] > 0:
+                st.success(f"✅ Book and {form_data['total_copy']} copies created successfully")
+            else:
+                st.warning("⚠️ Book created with 0 copies. You may need to add copies manually.")
+            
             return True
         except Exception as e:
             st.error(f"Error adding book and copies: {e}")
+            return False
+
+    def create_book_copy(self, copy_data: dict) -> bool:
+        """Create a new book copy"""
+        try:
+            api_client = APIClient()
+            # Extract just the path from the full URL
+            create_endpoint = ENDPOINTS["create_book_copy"].replace(API_BASE_URL, "")
+            response = api_client.post(create_endpoint, json=copy_data)
+            
+            if response.status_code != 201:
+                st.error(f"Failed to create book copy: {response.text}")
+                return False
+            return True
+        except Exception as e:
+            st.error(f"Error creating book copy: {e}")
+            return False
+    
+    def delete_book_copy(self, copy_id: int) -> bool:
+        """Delete a book copy"""
+        try:
+            delete_endpoint = f"/api/v1/book_copies/{copy_id}"
+            response = self.delete(delete_endpoint)
+            
+            if response.status_code not in [200, 204]:
+                st.error(f"Failed to delete book copy: {response.text}")
+                return False
+            return True
+        except Exception as e:
+            st.error(f"Error deleting book copy: {e}")
+            return False
+    
+    def delete_book(self, book_id: int) -> bool:
+        """Delete a book"""
+        try:
+            delete_endpoint = f"/api/v1/book/{book_id}"
+            response = self.delete(delete_endpoint)
+            
+            if response.status_code not in [200, 204]:
+                st.error(f"Failed to delete book: {response.text}")
+                return False
+            return True
+        except Exception as e:
+            st.error(f"Error deleting book: {e}")
+            return False
+
+    def update_book_copy(self, copy_id: int, copy_data: dict) -> bool:
+        """Update a book copy"""
+        try:
+            update_endpoint = f"/api/v1/book_copies/{copy_id}"
+            response = self.put(update_endpoint, json=copy_data)
+            
+            if response.status_code not in [200, 201]:
+                st.error(f"Failed to update book copy: {response.text}")
+                return False
+            return True
+        except Exception as e:
+            st.error(f"Error updating book copy: {e}")
             return False
 
 

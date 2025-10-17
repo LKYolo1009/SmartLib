@@ -24,7 +24,90 @@ ENDPOINTS = {
     "metadata/locations": f"{API_BASE_URL}/api/v1/metadata/locations",
     "create_book": f"{API_BASE_URL}/api/v1/book/",
     "create_book_copy": f"{API_BASE_URL}/api/v1/book_copies/",
-    "author": f"{API_BASE_URL}api/v1/metadata/authors/?skip=0&limit=100",
+    "search_book_by_title": f"{API_BASE_URL}/api/v1/book/search/title",
+    "search_author_by_name": f"{API_BASE_URL}/api/v1/metadata/authors/search",
+    "create_author": f"{API_BASE_URL}/api/v1/metadata/authors/",
+    "search_publisher_by_name": f"{API_BASE_URL}/api/v1/metadata/publishers/search",
+    "create_publisher": f"{API_BASE_URL}/api/v1/metadata/publishers/",
+    "search_location_by_name": f"{API_BASE_URL}/api/v1/metadata/locations/search",
+    "create_location": f"{API_BASE_URL}/api/v1/metadata/locations/",
+    "author": f"{API_BASE_URL}/api/v1/metadata/authors/?skip=0&limit=100",
+}
+
+# Category ID mapping
+CATEGORY_ID_MAPPING = {
+    "Class 000 - Computer science, information, and general works": 1,
+    "Class 100 - Philosophy and psychology": 2,
+    "Class 200 - Religion": 3,
+    "Class 300 - Social sciences": 4,
+    "Class 400 - Language": 5,
+    "Class 500 - Science": 6,
+    "Class 600 - Technology": 7,
+    "Class 700 - Arts and recreation": 8,
+    "Class 800 - Literature": 9,
+    "Class 900 - History and geography": 10,
+}
+
+# Language code mapping
+LANGUAGE_CODE_MAPPING = {
+    "English": "eng",
+    "Chinese": "chi",
+    "Japanese": "jpn",
+    "Korean": "kor",
+    "Malay": "mal",
+    "Tamil": "tam",
+    "Spanish": "spa",
+    "French": "fre",
+    "German": "ger",
+    "Russian": "rus",
+}
+
+# Acquisition type mapping
+ACQUISITION_TYPE_MAPPING = {
+    "purchased": "purchased",
+    "donated": "donated",
+}
+
+# Book condition mapping
+BOOK_CONDITION_MAPPING = {
+    "new": "new",
+    "good": "good",
+    "fair": "fair",
+    "poor": "poor",
+    "damaged": "damaged",
+}
+
+# Book status mapping
+BOOK_STATUS_MAPPING = {
+    "available": "available",
+    "borrowed": "borrowed",
+    "missing": "missing",
+    "unpublished": "unpublished",
+    "disposed": "disposed",
+}
+
+# Book Location Area mapping
+BOOK_LOCATION_AREA_MAPPING = {
+    "Main Shelf A": 1,
+    "Main Shelf B": 2,
+    "Main Shelf C": 3,
+    "Reference Book Area": 4,
+    "Journal Area": 5,
+    "New Book Display Area": 6,
+    "Special Collection Area": 7,
+    "Computer Science Area": 8,
+    "Medical Area": 9,
+    "Study Room A": 10,
+    "Study Room B": 11,
+    "Electronic Resource Area": 12,
+    "Children's Book Area": 13,
+    "Foreign Language Book Area": 14,
+    "Ancient Book Area": 15,
+    "Multimedia Area": 16,
+    "Self-Study Room": 17,
+    "Discussion Room": 18,
+    "Reading Room": 19,
+    "Exhibition Area": 20,
 }
 
 # 🎨 现代化配色方案 - 基于 Tailwind CSS 色彩系统
